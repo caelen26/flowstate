@@ -17,32 +17,74 @@ export interface User {
   householdSize: number;
   monthlyUsage: number; // Gallons
   joinedDate?: string;
-  
+
   // Persistence for Dashboard
   dashboardData?: {
     inputs: WaterUsageMetrics;
     isSubmitted: boolean;
     lastUpdated: string;
   };
+
+  // Daily Hygiene Tracking
+  dailyHygieneData?: {
+    inputs: DailyHygieneMetrics;
+    isSubmitted: boolean;
+    lastUpdated: string;
+  };
+
+  // Streak Tracking
+  streakData?: {
+    currentStreak: number;
+    longestStreak: number;
+    lastLogDate: string; // ISO date string
+    totalPoints: number;
+  };
 }
 
+// Daily Personal Hygiene Metrics (logged daily)
+export interface DailyHygieneMetrics {
+  showerMinutes: number;
+  baths: number;
+  faucetMinutes: number;
+  flushes: number;
+}
+
+// Weekly Household & Lifestyle Metrics (logged weekly)
+export interface WeeklyUsageMetrics {
+  // Household (Shared - needs div by householdSize)
+  laundryLoads: number;
+  dishwasherLoads: number;
+  gardenMinutes: number;
+
+  // Lifestyle (Individual)
+  meatMeals: number;
+  newClothingItems: number;
+  milesDriven: number;
+
+  // Tech & Circularity
+  recyclingItems: number; // Cans/Plastic recycled (Water credit)
+  compostLbs: number; // Pounds of food waste diverted (Water credit)
+  aiQueries: number; // Number of AI queries (Water usage)
+}
+
+// Combined metrics (for backwards compatibility and calculations)
 export interface WaterUsageMetrics {
   // Hygiene (Individual)
   showerMinutes: number;
   baths: number;
   faucetMinutes: number;
   flushes: number;
-  
+
   // Household (Shared - needs div by householdSize)
   laundryLoads: number;
   dishwasherLoads: number;
   gardenMinutes: number;
-  
+
   // Lifestyle (Individual)
   meatMeals: number;
   newClothingItems: number;
   milesDriven: number;
-  
+
   // New Metrics
   recyclingItems: number; // Cans/Plastic recycled (Water credit)
   compostLbs: number; // Pounds of food waste diverted (Water credit)

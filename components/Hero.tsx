@@ -33,7 +33,7 @@ const Hero: React.FC<HeroProps> = ({ onNavClick }) => {
             Global Impact Tracker
           </span>
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-serif font-normal text-white tracking-tight mb-8 drop-shadow-sm">
-            Your water footprint, <span className="italic text-[#F5F2EB]">made visible.</span>
+            Your Water Footprint, <span className="italic text-[#F5F2EB]">Made Visible.</span>
           </h1>
           <p className="max-w-lg mx-auto text-base md:text-xl text-white/90 font-light leading-relaxed mb-12 text-shadow-sm px-2">
             From your morning shower to your daily meals, discover where your water goes—and how to save it. Get personalized insights and join a global movement for conservation.

@@ -5,7 +5,7 @@
 */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, WaterUsageMetrics } from '../types';
+import { User, WaterUsageMetrics, DailyHygieneMetrics, WeeklyUsageMetrics } from '../types';
 import { WATER_METRICS } from '../constants';
 import { supabase } from '../services/supabaseClient';
 
@@ -15,18 +15,37 @@ interface DashboardProps {
 }
 
 // --- Research-Backed Constants ---
-const BASELINE_CANADIAN_WEEKLY = 4200; 
+const BASELINE_CANADIAN_WEEKLY = 4200;
+
+const DEFAULT_DAILY_INPUTS: DailyHygieneMetrics = {
+    showerMinutes: 8,
+    baths: 0,
+    faucetMinutes: 5,
+    flushes: 5,
+};
+
+const DEFAULT_WEEKLY_INPUTS: WeeklyUsageMetrics = {
+    laundryLoads: 4,
+    dishwasherLoads: 5,
+    gardenMinutes: 15,
+    meatMeals: 7,
+    newClothingItems: 1,
+    milesDriven: 100,
+    recyclingItems: 5,
+    compostLbs: 2,
+    aiQueries: 20,
+};
 
 const DEFAULT_INPUTS: WaterUsageMetrics = {
-    showerMinutes: 8,      
+    showerMinutes: 8,
     baths: 1,
-    faucetMinutes: 5,      
-    flushes: 5,   
-    laundryLoads: 4,       
-    dishwasherLoads: 5,    
+    faucetMinutes: 5,
+    flushes: 5,
+    laundryLoads: 4,
+    dishwasherLoads: 5,
     gardenMinutes: 15,
-    meatMeals: 7,          
-    newClothingItems: 1,   
+    meatMeals: 7,
+    newClothingItems: 1,
     milesDriven: 100,
     recyclingItems: 5,
     compostLbs: 2,
@@ -34,8 +53,16 @@ const DEFAULT_INPUTS: WaterUsageMetrics = {
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
-  
-  // Helper: Check if 7 days have passed since last update
+
+  // Helper: Check if a new day has started
+  const isNewDay = useMemo(() => {
+    if (!user.dailyHygieneData?.lastUpdated) return true;
+    const lastDate = new Date(user.dailyHygieneData.lastUpdated).toDateString();
+    const today = new Date().toDateString();
+    return lastDate !== today;
+  }, [user.dailyHygieneData?.lastUpdated]);
+
+  // Helper: Check if 7 days have passed since last weekly update
   const isNewWeek = useMemo(() => {
     if (!user.dashboardData?.lastUpdated) return false;
     const last = new Date(user.dashboardData.lastUpdated).getTime();
@@ -44,15 +71,48 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
     return (now - last) > oneWeekMs;
   }, [user.dashboardData?.lastUpdated]);
 
-  // Initialize from User persistence or defaults
-  const [inputs, setInputs] = useState<WaterUsageMetrics>(() => {
-      return user.dashboardData?.inputs || DEFAULT_INPUTS;
+  // Daily Hygiene Inputs
+  const [dailyInputs, setDailyInputs] = useState<DailyHygieneMetrics>(() => {
+      return user.dailyHygieneData?.inputs || DEFAULT_DAILY_INPUTS;
   });
-  
-  // Auto-reset submission if it's a new week
-  const [isSubmitted, setIsSubmitted] = useState(() => {
+
+  const [isDailySubmitted, setIsDailySubmitted] = useState(() => {
+      if (isNewDay) return false;
+      return user.dailyHygieneData?.isSubmitted || false;
+  });
+
+  // Weekly Household & Lifestyle Inputs
+  const [weeklyInputs, setWeeklyInputs] = useState<WeeklyUsageMetrics>(() => {
+      return {
+        laundryLoads: user.dashboardData?.inputs.laundryLoads || DEFAULT_WEEKLY_INPUTS.laundryLoads,
+        dishwasherLoads: user.dashboardData?.inputs.dishwasherLoads || DEFAULT_WEEKLY_INPUTS.dishwasherLoads,
+        gardenMinutes: user.dashboardData?.inputs.gardenMinutes || DEFAULT_WEEKLY_INPUTS.gardenMinutes,
+        meatMeals: user.dashboardData?.inputs.meatMeals || DEFAULT_WEEKLY_INPUTS.meatMeals,
+        newClothingItems: user.dashboardData?.inputs.newClothingItems || DEFAULT_WEEKLY_INPUTS.newClothingItems,
+        milesDriven: user.dashboardData?.inputs.milesDriven || DEFAULT_WEEKLY_INPUTS.milesDriven,
+        recyclingItems: user.dashboardData?.inputs.recyclingItems || DEFAULT_WEEKLY_INPUTS.recyclingItems,
+        compostLbs: user.dashboardData?.inputs.compostLbs || DEFAULT_WEEKLY_INPUTS.compostLbs,
+        aiQueries: user.dashboardData?.inputs.aiQueries || DEFAULT_WEEKLY_INPUTS.aiQueries,
+      };
+  });
+
+  const [isWeeklySubmitted, setIsWeeklySubmitted] = useState(() => {
       if (isNewWeek) return false;
       return user.dashboardData?.isSubmitted || false;
+  });
+
+  // Combined inputs for calculations
+  const inputs = useMemo((): WaterUsageMetrics => ({
+      ...dailyInputs,
+      ...weeklyInputs
+  }), [dailyInputs, weeklyInputs]);
+
+  // Streak data
+  const [streakData, setStreakData] = useState(() => user.streakData || {
+      currentStreak: 0,
+      longestStreak: 0,
+      lastLogDate: '',
+      totalPoints: 0
   });
 
   const [activeCategory, setActiveCategory] = useState<'all' | 'direct' | 'virtual'>('all');
@@ -60,23 +120,44 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
 
   // Sync state if user prop changes
   useEffect(() => {
+    // Sync daily hygiene data
+    if (user.dailyHygieneData) {
+        setDailyInputs(user.dailyHygieneData.inputs);
+        const lastDate = new Date(user.dailyHygieneData.lastUpdated).toDateString();
+        const today = new Date().toDateString();
+        setIsDailySubmitted(lastDate === today && user.dailyHygieneData.isSubmitted);
+    }
+
+    // Sync weekly data
     if (user.dashboardData) {
-        setInputs(user.dashboardData.inputs);
-        // Re-evaluate submission status on user reload
+        setWeeklyInputs({
+            laundryLoads: user.dashboardData.inputs.laundryLoads,
+            dishwasherLoads: user.dashboardData.inputs.dishwasherLoads,
+            gardenMinutes: user.dashboardData.inputs.gardenMinutes,
+            meatMeals: user.dashboardData.inputs.meatMeals,
+            newClothingItems: user.dashboardData.inputs.newClothingItems,
+            milesDriven: user.dashboardData.inputs.milesDriven,
+            recyclingItems: user.dashboardData.inputs.recyclingItems,
+            compostLbs: user.dashboardData.inputs.compostLbs,
+            aiQueries: user.dashboardData.inputs.aiQueries,
+        });
+
+        // Re-evaluate weekly submission status
         if (user.dashboardData.lastUpdated) {
             const last = new Date(user.dashboardData.lastUpdated).getTime();
             const now = Date.now();
             const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
-            if ((now - last) > oneWeekMs) {
-                setIsSubmitted(false);
-            } else {
-                setIsSubmitted(user.dashboardData.isSubmitted);
-            }
+            setIsWeeklySubmitted((now - last) <= oneWeekMs && user.dashboardData.isSubmitted);
         } else {
-            setIsSubmitted(user.dashboardData.isSubmitted);
+            setIsWeeklySubmitted(user.dashboardData.isSubmitted);
         }
     }
-  }, [user.id, user.dashboardData]);
+
+    // Sync streak data
+    if (user.streakData) {
+        setStreakData(user.streakData);
+    }
+  }, [user.id, user.dashboardData, user.dailyHygieneData, user.streakData]);
 
   // --- Calculation Engine ---
   const stats = useMemo(() => {
@@ -139,27 +220,139 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
     };
   }, [inputs, user.householdSize]);
 
-  const handleInputChange = (field: keyof WaterUsageMetrics, value: number) => {
-    setInputs(prev => ({ ...prev, [field]: value }));
-    if (isSubmitted) setIsSubmitted(false); 
+  // Helper to calculate streak
+  const calculateStreak = (lastLogDate: string): { currentStreak: number; isConsecutive: boolean } => {
+    if (!lastLogDate) return { currentStreak: 1, isConsecutive: false };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const lastLog = new Date(lastLogDate);
+    lastLog.setHours(0, 0, 0, 0);
+
+    const diffTime = today.getTime() - lastLog.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    // Consecutive day (logged yesterday)
+    if (diffDays === 1) {
+      return { currentStreak: streakData.currentStreak + 1, isConsecutive: true };
+    }
+
+    // Same day (already logged today, shouldn't happen but handle it)
+    if (diffDays === 0) {
+      return { currentStreak: streakData.currentStreak, isConsecutive: true };
+    }
+
+    // Streak broken
+    return { currentStreak: 1, isConsecutive: false };
   };
 
-  const handleSubmit = async () => {
+  const handleDailyInputChange = (field: keyof DailyHygieneMetrics, value: number) => {
+    setDailyInputs(prev => ({ ...prev, [field]: value }));
+    if (isDailySubmitted) setIsDailySubmitted(false);
+  };
+
+  const handleWeeklyInputChange = (field: keyof WeeklyUsageMetrics, value: number) => {
+    setWeeklyInputs(prev => ({ ...prev, [field]: value }));
+    if (isWeeklySubmitted) setIsWeeklySubmitted(false);
+  };
+
+  const handleDailySubmit = async () => {
       setSaving(true);
-      
-      const newMonthlyUsage = Math.round(stats.grandTotal * 4);
-      const dashboardPayload = {
+
+      const now = new Date().toISOString();
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      // Calculate streak
+      const { currentStreak, isConsecutive } = calculateStreak(streakData.lastLogDate);
+      const longestStreak = Math.max(currentStreak, streakData.longestStreak);
+      const totalPoints = streakData.totalPoints + 1; // 1 point per day logged
+
+      const dailyHygienePayload = {
           user_id: user.id,
-          inputs: inputs,
+          inputs: dailyInputs,
           is_submitted: true,
-          last_updated: new Date().toISOString()
+          last_updated: now
+      };
+
+      const streakPayload = {
+          user_id: user.id,
+          current_streak: currentStreak,
+          longest_streak: longestStreak,
+          last_log_date: todayStr,
+          total_points: totalPoints
       };
 
       try {
-          // 1. Save Dashboard Data
+          // 1. Save Daily Hygiene Data
+          const { error: dailyError } = await supabase
+            .from('daily_hygiene_data')
+            .upsert(dailyHygienePayload, { onConflict: 'user_id' });
+
+          if (dailyError) throw dailyError;
+
+          // 2. Update Streak Data
+          const { error: streakError } = await supabase
+            .from('streak_data')
+            .upsert(streakPayload, { onConflict: 'user_id' });
+
+          if (streakError) throw streakError;
+
+          // 3. Update Local State
+          setIsDailySubmitted(true);
+          const newStreakData = {
+              currentStreak,
+              longestStreak,
+              lastLogDate: todayStr,
+              totalPoints
+          };
+          setStreakData(newStreakData);
+
+          const updatedUser = {
+              ...user,
+              dailyHygieneData: {
+                  inputs: dailyInputs,
+                  isSubmitted: true,
+                  lastUpdated: now
+              },
+              streakData: newStreakData
+          };
+
+          onUpdateUser(updatedUser);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      } catch (e) {
+          console.error("Error saving daily data:", e);
+          alert("Failed to save daily data. Please try again.");
+      } finally {
+          setSaving(false);
+      }
+  };
+
+  const handleWeeklySubmit = async () => {
+      setSaving(true);
+
+      const now = new Date().toISOString();
+      const newMonthlyUsage = Math.round(stats.grandTotal * 4);
+
+      // Combine daily and weekly inputs for full calculation
+      const combinedInputs: WaterUsageMetrics = {
+          ...dailyInputs,
+          ...weeklyInputs
+      };
+
+      const weeklyPayload = {
+          user_id: user.id,
+          inputs: combinedInputs,
+          is_submitted: true,
+          last_updated: now
+      };
+
+      try {
+          // 1. Save Weekly Dashboard Data
           const { error: dbError } = await supabase
             .from('dashboard_data')
-            .upsert(dashboardPayload, { onConflict: 'user_id' });
+            .upsert(weeklyPayload, { onConflict: 'user_id' });
 
           if (dbError) throw dbError;
 
@@ -168,17 +361,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
             .from('profiles')
             .update({ monthly_usage: newMonthlyUsage })
             .eq('id', user.id);
-            
+
           if (profileError) throw profileError;
 
           // 3. Update Local State
-          setIsSubmitted(true);
+          setIsWeeklySubmitted(true);
           const updatedUser = {
               ...user,
               dashboardData: {
-                  inputs: inputs,
+                  inputs: combinedInputs,
                   isSubmitted: true,
-                  lastUpdated: dashboardPayload.last_updated
+                  lastUpdated: now
               },
               monthlyUsage: newMonthlyUsage
           };
@@ -187,8 +380,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
 
       } catch (e) {
-          console.error("Error saving data:", e);
-          alert("Failed to save data to the cloud. Please try again.");
+          console.error("Error saving weekly data:", e);
+          alert("Failed to save weekly data. Please try again.");
       } finally {
           setSaving(false);
       }
@@ -218,35 +411,70 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                 </div>
              </div>
            </div>
-           
-           <div className="text-left md:text-right pt-4 md:pt-0 border-t md:border-t-0 border-[#EBE7DE] w-full md:w-auto">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#A8A29E] block mb-2">
-                  {isSubmitted 
-                    ? 'Logged for this Week' 
-                    : (isNewWeek ? 'New Week — Update Log' : 'Estimated Weekly Usage')
-                  }
-              </span>
-              <div className="flex md:justify-end items-baseline gap-2">
-                  <span className={`text-5xl md:text-6xl font-serif leading-none transition-colors duration-500 ${isSubmitted ? 'text-[#4A7C59]' : 'text-[#2C2A26]'}`}>
-                      {Math.round(stats.grandTotal).toLocaleString()}
-                  </span>
-                  <span className="text-xl text-[#5D5A53] font-light">gal</span>
+
+           <div className="text-left md:text-right pt-4 md:pt-0 border-t md:border-t-0 border-[#EBE7DE] w-full md:w-auto space-y-4">
+              {/* Streak Display */}
+              <div className="bg-[#4A7C59]/10 p-4 rounded-lg border border-[#4A7C59]/20">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-widest text-[#4A7C59] block mb-1">
+                      Daily Streak
+                    </span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-serif text-[#4A7C59]">{streakData.currentStreak}</span>
+                      <span className="text-sm text-[#5D5A53]">days</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase tracking-wider text-[#A8A29E] block">Best</span>
+                    <span className="text-xl font-serif text-[#5D5A53]">{streakData.longestStreak}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Weekly Usage */}
+              <div>
+                <span className="text-xs font-bold uppercase tracking-widest text-[#A8A29E] block mb-2">
+                    Estimated Weekly Usage
+                </span>
+                <div className="flex md:justify-end items-baseline gap-2">
+                    <span className="text-5xl md:text-6xl font-serif leading-none text-[#2C2A26]">
+                        {Math.round(stats.grandTotal).toLocaleString()}
+                    </span>
+                    <span className="text-xl text-[#5D5A53] font-light">gal</span>
+                </div>
               </div>
            </div>
         </header>
 
-        {/* New Week Prompt Banner */}
-        {isNewWeek && !isSubmitted && (
-           <div className="bg-[#2C2A26] text-[#F5F2EB] p-6 mb-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-l-4 border-[#4A7C59] shadow-lg animate-fade-in-up">
+        {/* New Day Prompt Banner */}
+        {isNewDay && !isDailySubmitted && (
+           <div className="bg-[#2C2A26] text-[#F5F2EB] p-6 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-l-4 border-[#4A7C59] shadow-lg animate-fade-in-up">
               <div>
-                <h3 className="font-serif text-xl mb-1">A new week begins.</h3>
-                <p className="text-sm text-white/70 font-light">Your log has been reset. Please review and update your metrics to track your progress.</p>
+                <h3 className="font-serif text-xl mb-1">Good morning! Log your daily usage</h3>
+                <p className="text-sm text-white/70 font-light">Track your personal hygiene to maintain your streak</p>
               </div>
-              <button 
-                onClick={() => document.getElementById('calculator')?.scrollIntoView({ behavior: 'smooth' })}
+              <button
+                onClick={() => document.getElementById('daily-log')?.scrollIntoView({ behavior: 'smooth' })}
                 className="whitespace-nowrap px-6 py-3 bg-[#F5F2EB] text-[#2C2A26] text-xs font-bold uppercase tracking-widest hover:bg-white transition-colors shadow-md w-full sm:w-auto"
               >
-                Update Log
+                Log Today
+              </button>
+           </div>
+        )}
+
+        {/* New Week Prompt Banner */}
+        {isNewWeek && !isWeeklySubmitted && (
+           <div className="bg-[#5D5A53] text-[#F5F2EB] p-6 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-l-4 border-[#A8A29E] shadow-lg animate-fade-in-up">
+              <div>
+                <h3 className="font-serif text-xl mb-1">A new week begins.</h3>
+                <p className="text-sm text-white/70 font-light">Update your weekly household and lifestyle metrics</p>
+              </div>
+              <button
+                onClick={() => document.getElementById('weekly-log')?.scrollIntoView({ behavior: 'smooth' })}
+                className="whitespace-nowrap px-6 py-3 bg-[#F5F2EB] text-[#2C2A26] text-xs font-bold uppercase tracking-widest hover:bg-white transition-colors shadow-md w-full sm:w-auto"
+              >
+                Update Week
               </button>
            </div>
         )}
@@ -295,14 +523,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                         <div className="flex items-center gap-3">
                             <h3 className="font-serif text-xl text-[#2C2A26]">Usage Breakdown</h3>
-                            {isSubmitted && (
-                                <span className="bg-[#4A7C59]/10 text-[#4A7C59] px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                                        <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                                    </svg>
-                                    Submitted
-                                </span>
-                            )}
+                            <div className="flex gap-2">
+                                {isDailySubmitted && (
+                                    <span className="bg-[#4A7C59]/10 text-[#4A7C59] px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                                        </svg>
+                                        Daily
+                                    </span>
+                                )}
+                                {isWeeklySubmitted && (
+                                    <span className="bg-[#4A7C59]/10 text-[#4A7C59] px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                                        </svg>
+                                        Weekly
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
                             {['all', 'direct', 'virtual'].map(mode => (
@@ -356,89 +594,126 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
             </div>
 
             {/* RIGHT COLUMN: CONTROLS */}
-            <div className="lg:col-span-5" id="calculator">
-                <div className="bg-white/50 border border-[#D6D1C7] p-6 md:p-8 lg:sticky lg:top-32">
-                    <div className="flex justify-between items-center mb-8 gap-2">
-                        <h3 className="font-serif text-xl text-[#2C2A26]">Weekly Calculator</h3>
+            <div className="lg:col-span-5 space-y-8">
+                {/* Daily Hygiene Log */}
+                <div id="daily-log" className="bg-white/50 border border-[#D6D1C7] p-6 md:p-8">
+                    <div className="flex justify-between items-center mb-6 gap-2">
+                        <div>
+                            <h3 className="font-serif text-xl text-[#2C2A26]">Daily Log</h3>
+                            <p className="text-[10px] text-[#A8A29E] mt-1">Track your personal hygiene usage</p>
+                        </div>
                         <div className="flex gap-2">
-                            {isSubmitted && (
-                                <button 
-                                    onClick={() => setIsSubmitted(false)}
+                            {isDailySubmitted && (
+                                <button
+                                    onClick={() => setIsDailySubmitted(false)}
                                     className="bg-transparent border border-[#2C2A26] text-[#2C2A26] px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-[#EBE7DE] transition-colors"
                                 >
                                     Edit
                                 </button>
                             )}
-                            <button 
-                                onClick={handleSubmit}
-                                disabled={isSubmitted || saving}
+                            <button
+                                onClick={handleDailySubmit}
+                                disabled={isDailySubmitted || saving}
                                 className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                                    isSubmitted 
-                                        ? 'bg-[#4A7C59] text-white opacity-50 cursor-default' 
+                                    isDailySubmitted
+                                        ? 'bg-[#4A7C59] text-white opacity-50 cursor-default'
                                         : 'bg-[#2C2A26] text-[#F5F2EB] hover:bg-[#444]'
                                 }`}
                             >
-                                {saving ? 'Saving...' : (isSubmitted ? 'Logged' : 'Log Week')}
+                                {saving ? 'Saving...' : (isDailySubmitted ? '✓ Logged' : 'Log Today')}
                             </button>
                         </div>
                     </div>
-                    
-                    <div className={`space-y-10 transition-opacity duration-300 ${isSubmitted ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                        {/* Hygiene */}
+
+                    <div className={`space-y-6 transition-opacity duration-300 ${isDailySubmitted ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                        {/* Personal Hygiene */}
                         <div>
-                            <span className="text-xs font-bold uppercase tracking-widest text-[#A8A29E] mb-6 block">Personal Hygiene (Daily)</span>
+                            <span className="text-xs font-bold uppercase tracking-widest text-[#4A7C59] mb-4 block">Personal Hygiene</span>
                             <div className="space-y-6">
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
                                         <label>Shower Duration</label>
-                                        <span className="font-serif">{inputs.showerMinutes} min</span>
+                                        <span className="font-serif">{dailyInputs.showerMinutes} min</span>
                                     </div>
-                                    <input 
-                                        type="range" min="1" max="25" 
-                                        value={inputs.showerMinutes}
-                                        onChange={(e) => handleInputChange('showerMinutes', parseInt(e.target.value))}
-                                        className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
+                                    <input
+                                        type="range" min="1" max="25"
+                                        value={dailyInputs.showerMinutes}
+                                        onChange={(e) => handleDailyInputChange('showerMinutes', parseInt(e.target.value))}
+                                        className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>Baths per Week</label>
-                                        <span className="font-serif">{inputs.baths}</span>
+                                        <label>Baths Today</label>
+                                        <span className="font-serif">{dailyInputs.baths}</span>
                                     </div>
-                                    <input 
-                                        type="range" min="0" max="7" 
-                                        value={inputs.baths}
-                                        onChange={(e) => handleInputChange('baths', parseInt(e.target.value))}
-                                        className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
+                                    <input
+                                        type="range" min="0" max="3"
+                                        value={dailyInputs.baths}
+                                        onChange={(e) => handleDailyInputChange('baths', parseInt(e.target.value))}
+                                        className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
                                         <label>Faucet Run Time (Teeth/Face)</label>
-                                        <span className="font-serif">{inputs.faucetMinutes} min</span>
+                                        <span className="font-serif">{dailyInputs.faucetMinutes} min</span>
                                     </div>
-                                    <input 
-                                        type="range" min="1" max="20" 
-                                        value={inputs.faucetMinutes}
-                                        onChange={(e) => handleInputChange('faucetMinutes', parseInt(e.target.value))}
-                                        className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
+                                    <input
+                                        type="range" min="1" max="20"
+                                        value={dailyInputs.faucetMinutes}
+                                        onChange={(e) => handleDailyInputChange('faucetMinutes', parseInt(e.target.value))}
+                                        className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
                                         <label>Toilet Flushes</label>
-                                        <span className="font-serif">{inputs.flushes}x</span>
+                                        <span className="font-serif">{dailyInputs.flushes}x</span>
                                     </div>
-                                    <input 
-                                        type="range" min="1" max="15" 
-                                        value={inputs.flushes}
-                                        onChange={(e) => handleInputChange('flushes', parseInt(e.target.value))}
-                                        className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
+                                    <input
+                                        type="range" min="1" max="15"
+                                        value={dailyInputs.flushes}
+                                        onChange={(e) => handleDailyInputChange('flushes', parseInt(e.target.value))}
+                                        className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
+                {/* Weekly Household & Lifestyle Log */}
+                <div id="weekly-log" className="bg-white/50 border border-[#D6D1C7] p-6 md:p-8 lg:sticky lg:top-32">
+                    <div className="flex justify-between items-center mb-6 gap-2">
+                        <div>
+                            <h3 className="font-serif text-xl text-[#2C2A26]">Weekly Log</h3>
+                            <p className="text-[10px] text-[#A8A29E] mt-1">Track household & lifestyle usage</p>
+                        </div>
+                        <div className="flex gap-2">
+                            {isWeeklySubmitted && (
+                                <button
+                                    onClick={() => setIsWeeklySubmitted(false)}
+                                    className="bg-transparent border border-[#2C2A26] text-[#2C2A26] px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-[#EBE7DE] transition-colors"
+                                >
+                                    Edit
+                                </button>
+                            )}
+                            <button
+                                onClick={handleWeeklySubmit}
+                                disabled={isWeeklySubmitted || saving}
+                                className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                                    isWeeklySubmitted
+                                        ? 'bg-[#4A7C59] text-white opacity-50 cursor-default'
+                                        : 'bg-[#2C2A26] text-[#F5F2EB] hover:bg-[#444]'
+                                }`}
+                            >
+                                {saving ? 'Saving...' : (isWeeklySubmitted ? '✓ Logged' : 'Log Week')}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className={`space-y-10 transition-opacity duration-300 ${isWeeklySubmitted ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                         {/* Household */}
                         <div>
                             <span className="text-xs font-bold uppercase tracking-widest text-[#A8A29E] mb-6 block">Shared Household (Weekly Total)</span>
@@ -447,36 +722,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
                                         <label>Laundry Loads</label>
-                                        <span className="font-serif">{inputs.laundryLoads}</span>
+                                        <span className="font-serif">{weeklyInputs.laundryLoads}</span>
                                     </div>
-                                    <input 
-                                        type="range" min="0" max="15" 
-                                        value={inputs.laundryLoads}
-                                        onChange={(e) => handleInputChange('laundryLoads', parseInt(e.target.value))}
+                                    <input
+                                        type="range" min="0" max="15"
+                                        value={weeklyInputs.laundryLoads}
+                                        onChange={(e) => handleWeeklyInputChange('laundryLoads', parseInt(e.target.value))}
                                         className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
                                         <label>Dishwasher Loads</label>
-                                        <span className="font-serif">{inputs.dishwasherLoads}</span>
+                                        <span className="font-serif">{weeklyInputs.dishwasherLoads}</span>
                                     </div>
-                                    <input 
-                                        type="range" min="0" max="14" 
-                                        value={inputs.dishwasherLoads}
-                                        onChange={(e) => handleInputChange('dishwasherLoads', parseInt(e.target.value))}
+                                    <input
+                                        type="range" min="0" max="14"
+                                        value={weeklyInputs.dishwasherLoads}
+                                        onChange={(e) => handleWeeklyInputChange('dishwasherLoads', parseInt(e.target.value))}
                                         className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
                                         <label>Garden Watering (Minutes)</label>
-                                        <span className="font-serif">{inputs.gardenMinutes}</span>
+                                        <span className="font-serif">{weeklyInputs.gardenMinutes}</span>
                                     </div>
-                                    <input 
+                                    <input
                                         type="range" min="0" max="120" step="5"
-                                        value={inputs.gardenMinutes}
-                                        onChange={(e) => handleInputChange('gardenMinutes', parseInt(e.target.value))}
+                                        value={weeklyInputs.gardenMinutes}
+                                        onChange={(e) => handleWeeklyInputChange('gardenMinutes', parseInt(e.target.value))}
                                         className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
@@ -490,36 +765,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
                                         <label>Meat-based Meals</label>
-                                        <span className="font-serif">{inputs.meatMeals}</span>
+                                        <span className="font-serif">{weeklyInputs.meatMeals}</span>
                                     </div>
-                                    <input 
-                                        type="range" min="0" max="21" 
-                                        value={inputs.meatMeals}
-                                        onChange={(e) => handleInputChange('meatMeals', parseInt(e.target.value))}
+                                    <input
+                                        type="range" min="0" max="21"
+                                        value={weeklyInputs.meatMeals}
+                                        onChange={(e) => handleWeeklyInputChange('meatMeals', parseInt(e.target.value))}
                                         className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
                                         <label>New Clothing Items</label>
-                                        <span className="font-serif">{inputs.newClothingItems}</span>
+                                        <span className="font-serif">{weeklyInputs.newClothingItems}</span>
                                     </div>
-                                    <input 
-                                        type="range" min="0" max="5" 
-                                        value={inputs.newClothingItems}
-                                        onChange={(e) => handleInputChange('newClothingItems', parseInt(e.target.value))}
+                                    <input
+                                        type="range" min="0" max="5"
+                                        value={weeklyInputs.newClothingItems}
+                                        onChange={(e) => handleWeeklyInputChange('newClothingItems', parseInt(e.target.value))}
                                         className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
                                         <label>Miles Driven</label>
-                                        <span className="font-serif">{inputs.milesDriven}</span>
+                                        <span className="font-serif">{weeklyInputs.milesDriven}</span>
                                     </div>
-                                    <input 
+                                    <input
                                         type="range" min="0" max="500" step="10"
-                                        value={inputs.milesDriven}
-                                        onChange={(e) => handleInputChange('milesDriven', parseInt(e.target.value))}
+                                        value={weeklyInputs.milesDriven}
+                                        onChange={(e) => handleWeeklyInputChange('milesDriven', parseInt(e.target.value))}
                                         className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
@@ -533,12 +808,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
                                         <label>AI Queries (Chat/GenAI)</label>
-                                        <span className="font-serif">{inputs.aiQueries}</span>
+                                        <span className="font-serif">{weeklyInputs.aiQueries}</span>
                                     </div>
-                                    <input 
+                                    <input
                                         type="range" min="0" max="200" step="10"
-                                        value={inputs.aiQueries}
-                                        onChange={(e) => handleInputChange('aiQueries', parseInt(e.target.value))}
+                                        value={weeklyInputs.aiQueries}
+                                        onChange={(e) => handleWeeklyInputChange('aiQueries', parseInt(e.target.value))}
                                         className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                     <p className="text-[10px] text-[#A8A29E] mt-1">Data center cooling consumes ~0.13 gal per heavy session.</p>
@@ -546,24 +821,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#4A7C59]">
                                         <label>Items Recycled (Plastic/Alum)</label>
-                                        <span className="font-serif">-{inputs.recyclingItems} credit</span>
+                                        <span className="font-serif">-{weeklyInputs.recyclingItems} credit</span>
                                     </div>
-                                    <input 
-                                        type="range" min="0" max="50" 
-                                        value={inputs.recyclingItems}
-                                        onChange={(e) => handleInputChange('recyclingItems', parseInt(e.target.value))}
+                                    <input
+                                        type="range" min="0" max="50"
+                                        value={weeklyInputs.recyclingItems}
+                                        onChange={(e) => handleWeeklyInputChange('recyclingItems', parseInt(e.target.value))}
                                         className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
                                 <div>
                                     <div className="flex justify-between mb-2 text-sm text-[#4A7C59]">
                                         <label>Compost (Lbs diverted)</label>
-                                        <span className="font-serif">-{inputs.compostLbs} lbs</span>
+                                        <span className="font-serif">-{weeklyInputs.compostLbs} lbs</span>
                                     </div>
-                                    <input 
-                                        type="range" min="0" max="20" 
-                                        value={inputs.compostLbs}
-                                        onChange={(e) => handleInputChange('compostLbs', parseInt(e.target.value))}
+                                    <input
+                                        type="range" min="0" max="20"
+                                        value={weeklyInputs.compostLbs}
+                                        onChange={(e) => handleWeeklyInputChange('compostLbs', parseInt(e.target.value))}
                                         className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
                                     />
                                 </div>
