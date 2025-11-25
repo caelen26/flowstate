@@ -11,7 +11,7 @@ import About from './components/About';
 import Dashboard from './components/Dashboard';
 import Leaderboard from './components/Leaderboard';
 import Community from './components/Community';
-import Assistant from './components/Assistant';
+// import Assistant from './components/Assistant'; // DEACTIVATED: AI chatbot - uncomment to reactivate
 import Footer from './components/Footer';
 import Login from './components/Login';
 import Account from './components/Account';
@@ -261,7 +261,7 @@ function App() {
       </main>
 
       <Footer onLinkClick={handleNavClick} />
-      <Assistant user={user} />
+      {/* <Assistant user={user} /> */} {/* DEACTIVATED: AI chatbot - uncomment to reactivate */}
     </div>
   );
 }
