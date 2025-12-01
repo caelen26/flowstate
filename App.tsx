@@ -116,7 +116,21 @@ function App() {
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
-      
+
+      // Fetch Daily Hygiene Data
+      const { data: dailyHygiene, error: dailyError } = await supabase
+        .from('daily_hygiene_data')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Fetch Streak Data
+      const { data: streakInfo, error: streakError } = await supabase
+        .from('streak_data')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
       // Map DB snake_case to App camelCase
       const appUser: User = {
         id: profile.id,
@@ -132,6 +146,17 @@ function App() {
             inputs: dashboard.inputs,
             isSubmitted: dashboard.is_submitted,
             lastUpdated: dashboard.last_updated
+        } : undefined,
+        dailyHygieneData: dailyHygiene ? {
+            inputs: dailyHygiene.inputs,
+            isSubmitted: dailyHygiene.is_submitted,
+            lastUpdated: dailyHygiene.last_updated
+        } : undefined,
+        streakData: streakInfo ? {
+            currentStreak: streakInfo.current_streak,
+            longestStreak: streakInfo.longest_streak,
+            lastLogDate: streakInfo.last_log_date,
+            totalPoints: streakInfo.total_points
         } : undefined
       };
 

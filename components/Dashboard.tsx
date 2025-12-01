@@ -221,8 +221,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   }, [inputs, user.householdSize]);
 
   // Helper to calculate streak
-  const calculateStreak = (lastLogDate: string): { currentStreak: number; isConsecutive: boolean } => {
-    if (!lastLogDate) return { currentStreak: 1, isConsecutive: false };
+  const calculateStreak = (lastLogDate: string, currentStreakFromDB: number): { currentStreak: number; isConsecutive: boolean } => {
+    if (!lastLogDate) {
+      // First time ever logging
+      return { currentStreak: 1, isConsecutive: false };
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -231,19 +234,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
     lastLog.setHours(0, 0, 0, 0);
 
     const diffTime = today.getTime() - lastLog.getTime();
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    // Consecutive day (logged yesterday)
-    if (diffDays === 1) {
-      return { currentStreak: streakData.currentStreak + 1, isConsecutive: true };
-    }
-
-    // Same day (already logged today, shouldn't happen but handle it)
+    // Same day - user already logged today, maintain current streak from DB
     if (diffDays === 0) {
-      return { currentStreak: streakData.currentStreak, isConsecutive: true };
+      return { currentStreak: currentStreakFromDB, isConsecutive: true };
     }
 
-    // Streak broken
+    // Consecutive day (logged yesterday) - increment streak
+    if (diffDays === 1) {
+      return { currentStreak: currentStreakFromDB + 1, isConsecutive: true };
+    }
+
+    // Streak broken (more than 1 day gap)
     return { currentStreak: 1, isConsecutive: false };
   };
 
@@ -263,8 +266,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       const now = new Date().toISOString();
       const todayStr = new Date().toISOString().split('T')[0];
 
-      // Calculate streak
-      const { currentStreak, isConsecutive } = calculateStreak(streakData.lastLogDate);
+      // Prevent double-submission on the same day
+      if (streakData.lastLogDate === todayStr) {
+        alert("You've already logged today! Your streak is maintained.");
+        setSaving(false);
+        return;
+      }
+
+      // Calculate streak using current streak from database
+      const { currentStreak, isConsecutive } = calculateStreak(streakData.lastLogDate, streakData.currentStreak);
       const longestStreak = Math.max(currentStreak, streakData.longestStreak);
       const totalPoints = streakData.totalPoints + 1; // 1 point per day logged
 
