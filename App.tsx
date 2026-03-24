@@ -246,8 +246,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F2EB] font-sans text-[#2C2A26] selection:bg-[#D6D1C7] selection:text-[#2C2A26] cursor-none">
-      <CustomCursor />
+    <div className={`min-h-screen bg-[#F5F2EB] font-sans text-[#2C2A26] selection:bg-[#D6D1C7] selection:text-[#2C2A26] ${!isAuthenticated ? 'cursor-none' : ''}`}>
+      {!isAuthenticated && <CustomCursor />}
       <Navbar 
         onNavClick={handleNavClick}
         activeView={view.type}
