@@ -52,7 +52,93 @@ const DEFAULT_INPUTS: WaterUsageMetrics = {
     aiQueries: 20,
 };
 
+
+const AnimatedNumber: React.FC<{ value: number }> = ({ value }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const end = value;
+    if (start === end) {
+      setDisplayValue(end);
+      return;
+    }
+    
+    let totalDuration = 2000;
+    let startTime: number | null = null;
+    let animationFrameId: number;
+    
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / totalDuration, 1);
+      
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      setDisplayValue(Math.floor(easeOutQuart * (end - start) + start));
+      
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(end);
+      }
+    };
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [value]);
+
+  return <>{displayValue}</>;
+};
+
+
+const CustomSlider: React.FC<{
+  min: number; max: number; step?: number; value: number; onChange: (val: number) => void;
+}> = ({ min, max, step = 1, value, onChange }) => {
+  const percentage = ((value - min) / (max - min)) * 100;
+  return (
+    <>
+      <style>{'\n' +
+        '.slider-custom::-webkit-slider-thumb {\n' +
+        '  -webkit-appearance: none;\n' +
+        '  appearance: none;\n' +
+        '  width: 24px;\n' +
+        '  height: 24px;\n' +
+        '  background: #5F7A65;\n' +
+        '  border-radius: 50%;\n' +
+        '  cursor: pointer;\n' +
+        '  box-shadow: 0 2px 6px rgba(0,0,0,0.15);\n' +
+        '  transition: transform 0.1s;\n' +
+        '}\n' +
+        '.slider-custom::-webkit-slider-thumb:hover {\n' +
+        '  transform: scale(1.15);\n' +
+        '}\n' +
+        '.slider-custom::-moz-range-thumb {\n' +
+        '  width: 24px;\n' +
+        '  height: 24px;\n' +
+        '  background: #5F7A65;\n' +
+        '  border-radius: 50%;\n' +
+        '  cursor: pointer;\n' +
+        '  border: none;\n' +
+        '  box-shadow: 0 2px 6px rgba(0,0,0,0.15);\n' +
+        '}\n'
+      }</style>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="w-full h-3 md:h-4 rounded-full appearance-none outline-none cursor-pointer slider-custom"
+        style={{
+          background: `linear-gradient(to right, #98A89A ${percentage}%, #E8DFC8 ${percentage}%)`
+        }}
+      />
+    </>
+  );
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
+
+
 
   // Helper: Check if a new day has started
   const isNewDay = useMemo(() => {
@@ -268,7 +354,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
 
       // Prevent double-submission on the same day
       if (streakData.lastLogDate === todayStr) {
-        alert("You've already logged today! Your streak is maintained.");
         setSaving(false);
         return;
       }
@@ -398,476 +483,298 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   };
 
   return (
-    <div className="bg-[#F5F2EB] min-h-screen pt-24 md:pt-32 px-4 md:px-6 pb-12">
-      <div className="max-w-7xl mx-auto animate-fade-in-up">
+    <div className="bg-[#F5F0E8] min-h-screen pt-24 md:pt-32 px-4 md:px-6 pb-12 relative overflow-hidden text-[#2C2A26]">
+      {/* OTTER MASCOT OVERLAY */}
+      <div id="otter-mascot" className="fixed bottom-6 right-6 w-20 h-20 bg-[#98A89A] rounded-full flex items-center justify-center text-4xl shadow-lg shadow-[#98A89A]/30 animate-bounce cursor-pointer z-50 hover:bg-[#859F94] transition-colors" title="FlowState Guide">
+        🦦
+      </div>
+
+      <div className="max-w-6xl mx-auto relative z-10">
         
-        <header className="flex flex-col md:flex-row md:items-end justify-between mb-10 border-b border-[#D6D1C7] pb-6 gap-6">
-           <div className="flex-1">
-             <h1 className="text-4xl md:text-6xl font-serif text-[#2C2A26] mb-3 leading-tight">Your Footprint</h1>
-             <div className="flex flex-wrap items-center gap-4 text-[#5D5A53] font-light text-sm">
-                <div className="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-[#A8A29E]">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                    </svg>
-                    <span>{user.city}, {user.country}</span>
-                </div>
-                <span className="hidden md:inline text-[#D6D1C7]">|</span>
-                <div className="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-[#A8A29E]">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                    </svg>
-                    <span>Household of {user.householdSize}</span>
-                </div>
-             </div>
-           </div>
+        {/* HERO SECTION */}
+        <header className="mb-16 pt-8 animate-fade-in-up flex flex-col items-center w-full">
+          <h1 className="text-5xl md:text-7xl font-serif text-[#2C2A26] mb-4 text-center">
+             {(() => {
+                const hour = new Date().getHours();
+                let firstName = user?.firstName || (user?.username ? user.username.split(' ')[0] : '');
+                if (firstName) {
+                    firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+                }
+                const formatName = firstName ? ` ${firstName}` : '';
+                if (hour < 12) return 'Good Morning' + formatName;
+                if (hour < 17) return 'Good Afternoon' + formatName;
+                return 'Good Evening' + formatName;
+             })()}
+          </h1>
+          <p className="text-lg text-[#789094] font-medium mb-12 text-center">Your personal conservation journal.</p>
 
-           <div className="text-left md:text-right pt-4 md:pt-0 border-t md:border-t-0 border-[#EBE7DE] w-full md:w-auto space-y-4">
-              {/* Streak Display */}
-              <div className="bg-[#4A7C59]/10 p-4 rounded-lg border border-[#4A7C59]/20">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-widest text-[#4A7C59] block mb-1">
-                      Daily Streak
+          <div className="flex flex-col md:flex-row items-center justify-between w-full max-w-4xl mx-auto relative z-10">
+            
+            {/* Weekly Usage Stats */}
+            <div className="flex flex-col items-center md:items-end flex-1 pr-0 md:pr-12 group cursor-default">
+              <span className="text-sm font-bold uppercase tracking-widest text-[#789094] mb-2 opacity-80 group-hover:opacity-100 transition-opacity">Weekly Est.</span>
+              <div className="flex items-baseline gap-2 mb-2">
+                 <span className="text-6xl md:text-8xl font-serif text-[#2C2A26] tracking-tight">
+                    <AnimatedNumber value={Math.round(stats.grandTotal)} />
+                 </span>
+                 <span className="text-xl text-[#98A89A] ml-2 font-light">gal</span>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                 <span className="bg-[#98A89A]/20 text-[#5F7A65] px-3 py-1 rounded-full text-xs font-bold tracking-wide">
+                   <AnimatedNumber value={Math.abs(Math.round(stats.trend))} />% {stats.trend > 0 ? 'above' : 'below'} avg
+                 </span>
+              </div>
+            </div>
+
+            {/* Centerpiece: Score Ring */}
+            <div className="flex flex-col items-center relative group shrink-0">
+              <div className="w-56 h-56 md:w-64 md:h-64 relative flex items-center justify-center bg-white rounded-full shadow-[0_8px_40px_rgba(152,168,154,0.15)] group-hover:-translate-y-2 group-hover:shadow-[0_15px_50px_rgba(152,168,154,0.25)] transition-all duration-700">
+                <svg className="w-full h-full absolute inset-0 -rotate-90 p-3" viewBox="0 0 36 36">
+                  <path className="text-[#F5F0E8]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                  <path className="text-[#98A89A] transition-all duration-1000 ease-out" strokeDasharray={`${stats.score}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+                <div className="flex flex-col items-center text-center">
+                    <span className="text-6xl md:text-7xl font-serif text-[#2C2A26]">
+                       <AnimatedNumber value={stats.score} />
                     </span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-serif text-[#4A7C59]">{streakData.currentStreak}</span>
-                      <span className="text-sm text-[#5D5A53]">days</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] uppercase tracking-wider text-[#A8A29E] block">Best</span>
-                    <span className="text-xl font-serif text-[#5D5A53]">{streakData.longestStreak}</span>
-                  </div>
+                    <span className="text-xs uppercase tracking-widest text-[#98A89A] mt-2 font-bold">Water Score</span>
                 </div>
               </div>
+              <h3 className="font-serif text-2xl mt-6 text-[#2C2A26]">
+                 {stats.score > 80 ? "Excellent Stewardship" : stats.score > 50 ? "Moderate Impact" : "High Consumption"}
+              </h3>
+            </div>
 
-              {/* Weekly Usage */}
-              <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-[#A8A29E] block mb-2">
-                    Estimated Weekly Usage
+            {/* Streak */}
+            <div className="flex flex-col items-center md:items-start flex-1 pl-0 md:pl-12 group cursor-default">
+              <span className="text-sm font-bold uppercase tracking-widest text-[#789094] mb-3 opacity-80 group-hover:opacity-100 transition-opacity">Streak</span>
+              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border border-[#D5D0C6] flex flex-col items-center justify-center bg-white/50 shadow-sm group-hover:-translate-y-1 group-hover:shadow-md transition-all duration-500">
+                <span className="text-4xl md:text-5xl font-serif text-[#2C2A26]">
+                   <AnimatedNumber value={streakData.currentStreak} />
                 </span>
-                <div className="flex md:justify-end items-baseline gap-2">
-                    <span className="text-5xl md:text-6xl font-serif leading-none text-[#2C2A26]">
-                        {Math.round(stats.grandTotal).toLocaleString()}
-                    </span>
-                    <span className="text-xl text-[#5D5A53] font-light">gal</span>
-                </div>
+                <span className="text-[10px] text-[#98A89A] uppercase font-bold tracking-wider mt-1">Days</span>
               </div>
-           </div>
+            </div>
+          </div>
         </header>
 
-        {/* New Day Prompt Banner */}
-        {isNewDay && !isDailySubmitted && (
-           <div className="bg-[#2C2A26] text-[#F5F2EB] p-6 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-l-4 border-[#4A7C59] shadow-lg animate-fade-in-up">
-              <div>
-                <h3 className="font-serif text-xl mb-1">Good morning! Log your daily usage</h3>
-                <p className="text-sm text-white/70 font-light">Track your personal hygiene to maintain your streak</p>
-              </div>
-              <button
-                onClick={() => document.getElementById('daily-log')?.scrollIntoView({ behavior: 'smooth' })}
-                className="whitespace-nowrap px-6 py-3 bg-[#F5F2EB] text-[#2C2A26] text-xs font-bold uppercase tracking-widest hover:bg-white transition-colors shadow-md w-full sm:w-auto"
-              >
-                Log Today
-              </button>
-           </div>
+        {/* Organic SVG Divider */}
+        <div className="w-full flex justify-center mb-16 opacity-30 text-[#98A89A]">
+            <svg width="200" height="20" viewBox="0 0 200 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 10C50 10 50 0 100 0C150 0 150 10 200 10" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+        </div>
+
+        {/* TODAY'S CHECK-IN UNIFIED CARD */}
+        {(!isDailySubmitted || !isWeeklySubmitted) && (
+          <div className="mb-12 bg-white rounded-3xl p-8 shadow-[0_4px_30px_rgba(0,0,0,0.03)] border border-[#E8DFC8] flex flex-col md:flex-row justify-between items-center gap-6 animate-fade-in-up hover:-translate-y-1 transition-transform duration-500 delay-100">
+            <div className="text-center md:text-left">
+              <h3 className="font-serif text-2xl text-[#2C2A26] mb-2">Today's Check-in</h3>
+              <p className="text-[#789094] font-medium text-sm">Your actions today ripple into tomorrow.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              {!isDailySubmitted && (
+                 <button onClick={() => document.getElementById('daily-log')?.scrollIntoView({ behavior: 'smooth' })} className="whitespace-nowrap px-8 py-3.5 bg-[#98A89A] text-white rounded-full text-sm font-semibold hover:bg-[#859F94] transition-colors shadow-sm w-full sm:w-auto">
+                    Log Daily Use
+                 </button>
+              )}
+              {!isWeeklySubmitted && (
+                 <button onClick={() => document.getElementById('weekly-log')?.scrollIntoView({ behavior: 'smooth' })} className="whitespace-nowrap px-8 py-3.5 bg-white border border-[#E8DFC8] text-[#2C2A26] rounded-full text-sm font-semibold hover:bg-[#F5F0E8] transition-colors w-full sm:w-auto">
+                    Update Habits
+                 </button>
+              )}
+            </div>
+          </div>
         )}
 
-        {/* New Week Prompt Banner */}
-        {isNewWeek && !isWeeklySubmitted && (
-           <div className="bg-[#5D5A53] text-[#F5F2EB] p-6 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-l-4 border-[#A8A29E] shadow-lg animate-fade-in-up">
-              <div>
-                <h3 className="font-serif text-xl mb-1">A new week begins.</h3>
-                <p className="text-sm text-white/70 font-light">Update your weekly household and lifestyle metrics</p>
-              </div>
-              <button
-                onClick={() => document.getElementById('weekly-log')?.scrollIntoView({ behavior: 'smooth' })}
-                className="whitespace-nowrap px-6 py-3 bg-[#F5F2EB] text-[#2C2A26] text-xs font-bold uppercase tracking-widest hover:bg-white transition-colors shadow-md w-full sm:w-auto"
-              >
-                Update Week
-              </button>
-           </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 pb-12">
             
-            {/* LEFT COLUMN: VISUALIZATION */}
-            <div className="lg:col-span-7 space-y-8">
-                
-                {/* Impact Score Card */}
-                <div className="bg-[#2C2A26] text-[#F5F2EB] p-6 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-12 relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -mr-24 -mt-24 pointer-events-none"></div>
-                   
-                   {/* Gauge */}
-                   <div className="relative w-32 h-32 md:w-40 md:h-40 flex-shrink-0">
-                      <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                        <path className="text-white/10" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" />
-                        <path className="text-[#F5F2EB] transition-all duration-1000 ease-out" strokeDasharray={`${stats.score}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-3xl md:text-4xl font-serif">{stats.score}</span>
-                          <span className="text-[10px] uppercase tracking-widest opacity-70">Score</span>
-                      </div>
-                   </div>
-
-                   <div className="z-10 text-center md:text-left">
-                       <h3 className="text-xl md:text-2xl font-serif mb-2">
-                           {stats.score > 80 ? "Excellent Stewardship" : stats.score > 50 ? "Moderate Impact" : "High Consumption"}
-                       </h3>
-                       <p className="text-white/70 font-light leading-relaxed text-sm mb-4">
-                           {stats.score > 80 
-                             ? "You are a leader in conservation." 
-                             : "Small changes in diet or shower time can have a massive impact."}
-                       </p>
-                       <div className="flex items-center justify-center md:justify-start gap-4 text-xs font-medium uppercase tracking-widest">
-                           <span className={`${stats.trend > 0 ? 'text-red-300' : 'text-green-300'}`}>
-                               {stats.trend > 0 ? '↑' : '↓'} {Math.abs(Math.round(stats.trend))}% vs Canada Avg
-                           </span>
-                           <span className="text-white/40 text-[9px]">(Env. Canada)</span>
-                       </div>
-                   </div>
+            {/* DAILY LOG PANEL */}
+            <div id="daily-log" className="bg-white rounded-3xl p-8 md:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-[#E8DFC8]/50 hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-500 animate-fade-in-up delay-200">
+                <div className="flex justify-between items-center mb-8 gap-2">
+                    <div>
+                        <h3 className="font-serif text-2xl text-[#2C2A26]">Daily Log</h3>
+                        <p className="text-xs text-[#98A89A] mt-1 font-medium tracking-wide">Track your personal hygiene usage</p>
+                    </div>
+                    <div className="flex gap-2">
+                        {isDailySubmitted && (
+                            <button
+                                onClick={() => setIsDailySubmitted(false)}
+                                className="bg-transparent text-[#789094] px-4 py-2 text-xs font-bold uppercase tracking-widest hover:text-[#2C2A26] transition-colors"
+                            >
+                                Edit
+                            </button>
+                        )}
+                        <button
+                            onClick={handleDailySubmit}
+                            disabled={isDailySubmitted || saving}
+                            className={`px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                                isDailySubmitted
+                                    ? 'bg-[#98A89A] text-[#F5F0E8] shadow-sm cursor-default'
+                                    : 'bg-[#2C2A26] text-[#F5F2EB] hover:bg-[#444]'
+                            }`}
+                        >
+                            {saving ? 'Saving...' : (isDailySubmitted ? '✓ Logged' : 'Log Today')}
+                        </button>
+                    </div>
                 </div>
 
-                {/* Breakdown Chart */}
-                <div className="bg-white border border-[#EBE7DE] p-6 md:p-8 relative">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-                        <div className="flex items-center gap-3">
-                            <h3 className="font-serif text-xl text-[#2C2A26]">Usage Breakdown</h3>
-                            <div className="flex gap-2">
-                                {isDailySubmitted && (
-                                    <span className="bg-[#4A7C59]/10 text-[#4A7C59] px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                                            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                                        </svg>
-                                        Daily
-                                    </span>
-                                )}
-                                {isWeeklySubmitted && (
-                                    <span className="bg-[#4A7C59]/10 text-[#4A7C59] px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                                            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                                        </svg>
-                                        Weekly
-                                    </span>
-                                )}
+                <div className={`space-y-6 transition-opacity duration-300 ${isDailySubmitted ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                    <div className="space-y-6">
+                        <div className="group border-b border-[#98A89A]/20 pb-6">
+                            <div className="flex justify-between items-end mb-4">
+                                <label className="text-sm font-semibold text-[#789094]">Shower Duration</label>
+                                <span className="font-serif text-xl md:text-2xl text-[#2C2A26]">{dailyInputs.showerMinutes} <span className="text-sm font-sans text-[#98A89A]">min</span></span>
                             </div>
+                            <CustomSlider min={1} max={25} value={dailyInputs.showerMinutes} onChange={(val) => handleDailyInputChange('showerMinutes', val)} />
                         </div>
-                        <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
-                            {['all', 'direct', 'virtual'].map(mode => (
-                                <button 
-                                    key={mode}
-                                    onClick={() => setActiveCategory(mode as any)}
-                                    className={`text-[10px] uppercase tracking-widest px-3 py-1 border transition-colors whitespace-nowrap ${activeCategory === mode ? 'bg-[#2C2A26] text-white border-[#2C2A26]' : 'text-[#A8A29E] border-[#EBE7DE] hover:border-[#2C2A26]'}`}
-                                >
-                                    {mode}
-                                </button>
-                            ))}
+                        <div className="group border-b border-[#98A89A]/20 pb-6">
+                            <div className="flex justify-between items-end mb-4">
+                                <label className="text-sm font-semibold text-[#789094]">Baths Today</label>
+                                <span className="font-serif text-xl md:text-2xl text-[#2C2A26]">{dailyInputs.baths} <span className="text-sm font-sans text-[#98A89A]">tubs</span></span>
+                            </div>
+                            <CustomSlider min={0} max={3} value={dailyInputs.baths} onChange={(val) => handleDailyInputChange('baths', val)} />
                         </div>
-                    </div>
-
-                    <div className="space-y-5">
-                        {Object.entries(stats.breakdown).map(([category, val]) => {
-                            const numericVal = val as number;
-                            const isCredit = numericVal < 0; // Recycling/Compost
-                            const isDirect = ['Showers', 'Baths', 'Toilet', 'Faucets', 'Laundry', 'Dishes', 'Garden'].includes(category);
-                            
-                            if (activeCategory === 'direct' && !isDirect) return null;
-                            if (activeCategory === 'virtual' && isDirect) return null;
-                            if (Math.abs(numericVal) < 1) return null;
-
-                            const percent = (Math.abs(numericVal) / stats.grandTotal) * 100;
-                            const displayPercent = Math.min(100, Math.max(percent, 1)); 
-
-                            return (
-                                <div key={category} className="group">
-                                    <div className="flex justify-between text-xs mb-1">
-                                        <span className={`font-medium ${isCredit ? 'text-[#4A7C59]' : 'text-[#5D5A53]'}`}>
-                                          {category} {isCredit && '(Offset)'}
-                                        </span>
-                                        <span className={`${isCredit ? 'text-[#4A7C59]' : 'text-[#A8A29E]'}`}>
-                                          {Math.round(numericVal).toLocaleString()} gal
-                                        </span>
-                                    </div>
-                                    <div className="w-full h-2 bg-[#F5F2EB] relative overflow-hidden">
-                                        <div 
-                                            className={`h-full transition-all duration-500 ${
-                                                isCredit ? 'bg-[#4A7C59]' : isDirect ? 'bg-[#8C8881]' : 'bg-[#2C2A26]'
-                                            }`} 
-                                            style={{ width: `${displayPercent}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                        <div className="group border-b border-[#98A89A]/20 pb-6">
+                            <div className="flex justify-between items-end mb-4">
+                                <label className="text-sm font-semibold text-[#789094]">Faucet Run Time</label>
+                                <span className="font-serif text-xl md:text-2xl text-[#2C2A26]">{dailyInputs.faucetMinutes} <span className="text-sm font-sans text-[#98A89A]">min</span></span>
+                            </div>
+                            <CustomSlider min={1} max={20} value={dailyInputs.faucetMinutes} onChange={(val) => handleDailyInputChange('faucetMinutes', val)} />
+                        </div>
+                        <div className="group">
+                            <div className="flex justify-between items-end mb-4">
+                                <label className="text-sm font-semibold text-[#789094]">Toilet Flushes</label>
+                                <span className="font-serif text-xl md:text-2xl text-[#2C2A26]">{dailyInputs.flushes} <span className="text-sm font-sans text-[#98A89A]">times</span></span>
+                            </div>
+                            <CustomSlider min={1} max={15} value={dailyInputs.flushes} onChange={(val) => handleDailyInputChange('flushes', val)} />
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* RIGHT COLUMN: CONTROLS */}
-            <div className="lg:col-span-5 space-y-8">
-                {/* Daily Hygiene Log */}
-                <div id="daily-log" className="bg-white/50 border border-[#D6D1C7] p-6 md:p-8">
-                    <div className="flex justify-between items-center mb-6 gap-2">
-                        <div>
-                            <h3 className="font-serif text-xl text-[#2C2A26]">Daily Log</h3>
-                            <p className="text-[10px] text-[#A8A29E] mt-1">Track your personal hygiene usage</p>
-                        </div>
-                        <div className="flex gap-2">
-                            {isDailySubmitted && (
-                                <button
-                                    onClick={() => setIsDailySubmitted(false)}
-                                    className="bg-transparent border border-[#2C2A26] text-[#2C2A26] px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-[#EBE7DE] transition-colors"
-                                >
-                                    Edit
-                                </button>
-                            )}
+            {/* WEEKLY LOG PANEL */}
+            <div id="weekly-log" className="bg-white rounded-3xl p-8 md:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-[#E8DFC8]/50 hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-500 animate-fade-in-up delay-300">
+                <div className="flex justify-between items-center mb-8 gap-2">
+                    <div>
+                        <h3 className="font-serif text-2xl text-[#2C2A26]">Habits & Weekly</h3>
+                        <p className="text-xs text-[#98A89A] mt-1 font-medium tracking-wide">Household and lifestyle</p>
+                    </div>
+                    <div className="flex gap-2">
+                        {isWeeklySubmitted && (
                             <button
-                                onClick={handleDailySubmit}
-                                disabled={isDailySubmitted || saving}
-                                className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                                    isDailySubmitted
-                                        ? 'bg-[#4A7C59] text-white opacity-50 cursor-default'
-                                        : 'bg-[#2C2A26] text-[#F5F2EB] hover:bg-[#444]'
-                                }`}
+                                onClick={() => setIsWeeklySubmitted(false)}
+                                className="bg-transparent text-[#789094] px-4 py-2 text-xs font-bold uppercase tracking-widest hover:text-[#2C2A26] transition-colors"
                             >
-                                {saving ? 'Saving...' : (isDailySubmitted ? '✓ Logged' : 'Log Today')}
+                                Edit
                             </button>
+                        )}
+                        <button
+                            onClick={handleWeeklySubmit}
+                            disabled={isWeeklySubmitted || saving}
+                            className={`px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                                isWeeklySubmitted
+                                    ? 'bg-[#98A89A] text-[#F5F0E8] shadow-sm cursor-default'
+                                    : 'bg-[#2C2A26] text-[#F5F2EB] hover:bg-[#444]'
+                            }`}
+                        >
+                            {saving ? 'Saving...' : (isWeeklySubmitted ? '✓ Logged' : 'Log Week')}
+                        </button>
+                    </div>
+                </div>
+
+                <div className={`space-y-8 transition-opacity duration-300 ${isWeeklySubmitted ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                    
+                    {/* Household Section */}
+                    <div>
+                        <h4 className="text-sm font-serif text-[#2C2A26] border-b border-[#E8DFC8] pb-2 mb-6">Shared Household</h4>
+                        <div className="space-y-6">
+                            <div className="group border-b border-[#E8DFC8]/50 pb-5">
+                                <div className="flex justify-between items-end mb-3">
+                                    <label className="text-xs font-semibold text-[#789094]">Laundry Loads</label>
+                                    <span className="font-serif text-xl text-[#2C2A26]">{weeklyInputs.laundryLoads}</span>
+                                </div>
+                                <CustomSlider min={0} max={15} value={weeklyInputs.laundryLoads} onChange={(val) => handleWeeklyInputChange('laundryLoads', val)} />
+                            </div>
+                            <div className="group border-b border-[#E8DFC8]/50 pb-5">
+                                <div className="flex justify-between items-end mb-3">
+                                    <label className="text-xs font-semibold text-[#789094]">Dishwasher Loads</label>
+                                    <span className="font-serif text-xl text-[#2C2A26]">{weeklyInputs.dishwasherLoads}</span>
+                                </div>
+                                <CustomSlider min={0} max={14} value={weeklyInputs.dishwasherLoads} onChange={(val) => handleWeeklyInputChange('dishwasherLoads', val)} />
+                            </div>
+                            <div className="group">
+                                <div className="flex justify-between items-end mb-3">
+                                    <label className="text-xs font-semibold text-[#789094]">Garden Watering (min)</label>
+                                    <span className="font-serif text-xl text-[#2C2A26]">{weeklyInputs.gardenMinutes}</span>
+                                </div>
+                                <CustomSlider min={0} max={120} step={5} value={weeklyInputs.gardenMinutes} onChange={(val) => handleWeeklyInputChange('gardenMinutes', val)} />
+                            </div>
                         </div>
                     </div>
 
-                    <div className={`space-y-6 transition-opacity duration-300 ${isDailySubmitted ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                        {/* Personal Hygiene */}
-                        <div>
-                            <span className="text-xs font-bold uppercase tracking-widest text-[#4A7C59] mb-4 block">Personal Hygiene</span>
-                            <div className="space-y-6">
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>Shower Duration</label>
-                                        <span className="font-serif">{dailyInputs.showerMinutes} min</span>
-                                    </div>
-                                    <input
-                                        type="range" min="1" max="25"
-                                        value={dailyInputs.showerMinutes}
-                                        onChange={(e) => handleDailyInputChange('showerMinutes', parseInt(e.target.value))}
-                                        className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
+                    {/* Lifestyle Section */}
+                    <div>
+                        <h4 className="text-sm font-serif text-[#2C2A26] border-b border-[#E8DFC8] pb-2 mb-6">Lifestyle</h4>
+                        <div className="space-y-6">
+                            <div className="group border-b border-[#E8DFC8]/50 pb-5">
+                                <div className="flex justify-between items-end mb-3">
+                                    <label className="text-xs font-semibold text-[#789094]">Meat-based Meals</label>
+                                    <span className="font-serif text-xl text-[#2C2A26]">{weeklyInputs.meatMeals}</span>
                                 </div>
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>Baths Today</label>
-                                        <span className="font-serif">{dailyInputs.baths}</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="3"
-                                        value={dailyInputs.baths}
-                                        onChange={(e) => handleDailyInputChange('baths', parseInt(e.target.value))}
-                                        className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
+                                <CustomSlider min={0} max={21} value={weeklyInputs.meatMeals} onChange={(val) => handleWeeklyInputChange('meatMeals', val)} />
+                            </div>
+                            <div className="group border-b border-[#E8DFC8]/50 pb-5">
+                                <div className="flex justify-between items-end mb-3">
+                                    <label className="text-xs font-semibold text-[#789094]">New Clothing Items</label>
+                                    <span className="font-serif text-xl text-[#2C2A26]">{weeklyInputs.newClothingItems}</span>
                                 </div>
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>Faucet Run Time (Teeth/Face)</label>
-                                        <span className="font-serif">{dailyInputs.faucetMinutes} min</span>
-                                    </div>
-                                    <input
-                                        type="range" min="1" max="20"
-                                        value={dailyInputs.faucetMinutes}
-                                        onChange={(e) => handleDailyInputChange('faucetMinutes', parseInt(e.target.value))}
-                                        className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
+                                <CustomSlider min={0} max={5} value={weeklyInputs.newClothingItems} onChange={(val) => handleWeeklyInputChange('newClothingItems', val)} />
+                            </div>
+                            <div className="group border-b border-[#E8DFC8]/50 pb-5">
+                                <div className="flex justify-between items-end mb-3">
+                                    <label className="text-xs font-semibold text-[#789094]">Miles Driven</label>
+                                    <span className="font-serif text-xl text-[#2C2A26]">{weeklyInputs.milesDriven}</span>
                                 </div>
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>Toilet Flushes</label>
-                                        <span className="font-serif">{dailyInputs.flushes}x</span>
-                                    </div>
-                                    <input
-                                        type="range" min="1" max="15"
-                                        value={dailyInputs.flushes}
-                                        onChange={(e) => handleDailyInputChange('flushes', parseInt(e.target.value))}
-                                        className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
+                                <CustomSlider min={0} max={500} step={10} value={weeklyInputs.milesDriven} onChange={(val) => handleWeeklyInputChange('milesDriven', val)} />
+                            </div>
+                            <div className="group border-b border-[#E8DFC8]/50 pb-5">
+                                <div className="flex justify-between items-end mb-3">
+                                    <label className="text-xs font-semibold text-[#789094]">AI Queries (heavy)</label>
+                                    <span className="font-serif text-xl text-[#2C2A26]">{weeklyInputs.aiQueries}</span>
                                 </div>
+                                <CustomSlider min={0} max={200} step={10} value={weeklyInputs.aiQueries} onChange={(val) => handleWeeklyInputChange('aiQueries', val)} />
+                                <p className="text-[10px] text-[#A8A29E] mt-1">Data center cooling consumes ~0.005 gal per heavy session.</p>
+                            </div>
+                            <div className="group border-b border-[#E8DFC8]/50 pb-5">
+                                <div className="flex justify-between items-end mb-3">
+                                    <label className="text-xs font-semibold text-[#98A89A]">Items Recycled</label>
+                                    <span className="font-serif text-xl text-[#5F7A65]">-{weeklyInputs.recyclingItems}</span>
+                                </div>
+                                <CustomSlider min={0} max={50} value={weeklyInputs.recyclingItems} onChange={(val) => handleWeeklyInputChange('recyclingItems', val)} />
+                            </div>
+                            <div className="group border-b border-[#E8DFC8]/50 pb-5">
+                                <div className="flex justify-between items-end mb-3">
+                                    <label className="text-xs font-semibold text-[#98A89A]">Compost (lbs)</label>
+                                    <span className="font-serif text-xl text-[#5F7A65]">-{weeklyInputs.compostLbs}</span>
+                                </div>
+                                <CustomSlider min={0} max={20} value={weeklyInputs.compostLbs} onChange={(val) => handleWeeklyInputChange('compostLbs', val)} />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Weekly Household & Lifestyle Log */}
-                <div id="weekly-log" className="bg-white/50 border border-[#D6D1C7] p-6 md:p-8 lg:sticky lg:top-32">
-                    <div className="flex justify-between items-center mb-6 gap-2">
-                        <div>
-                            <h3 className="font-serif text-xl text-[#2C2A26]">Weekly Log</h3>
-                            <p className="text-[10px] text-[#A8A29E] mt-1">Track household & lifestyle usage</p>
-                        </div>
-                        <div className="flex gap-2">
-                            {isWeeklySubmitted && (
-                                <button
-                                    onClick={() => setIsWeeklySubmitted(false)}
-                                    className="bg-transparent border border-[#2C2A26] text-[#2C2A26] px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-[#EBE7DE] transition-colors"
-                                >
-                                    Edit
-                                </button>
-                            )}
-                            <button
-                                onClick={handleWeeklySubmit}
-                                disabled={isWeeklySubmitted || saving}
-                                className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                                    isWeeklySubmitted
-                                        ? 'bg-[#4A7C59] text-white opacity-50 cursor-default'
-                                        : 'bg-[#2C2A26] text-[#F5F2EB] hover:bg-[#444]'
-                                }`}
-                            >
-                                {saving ? 'Saving...' : (isWeeklySubmitted ? '✓ Logged' : 'Log Week')}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className={`space-y-10 transition-opacity duration-300 ${isWeeklySubmitted ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                        {/* Household */}
-                        <div>
-                            <span className="text-xs font-bold uppercase tracking-widest text-[#A8A29E] mb-6 block">Shared Household (Weekly Total)</span>
-                            <p className="text-[10px] text-[#A8A29E] mb-4 -mt-4">These values are divided by your household size ({user.householdSize}).</p>
-                            <div className="space-y-6">
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>Laundry Loads</label>
-                                        <span className="font-serif">{weeklyInputs.laundryLoads}</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="15"
-                                        value={weeklyInputs.laundryLoads}
-                                        onChange={(e) => handleWeeklyInputChange('laundryLoads', parseInt(e.target.value))}
-                                        className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
-                                </div>
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>Dishwasher Loads</label>
-                                        <span className="font-serif">{weeklyInputs.dishwasherLoads}</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="14"
-                                        value={weeklyInputs.dishwasherLoads}
-                                        onChange={(e) => handleWeeklyInputChange('dishwasherLoads', parseInt(e.target.value))}
-                                        className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
-                                </div>
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>Garden Watering (Minutes)</label>
-                                        <span className="font-serif">{weeklyInputs.gardenMinutes}</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="120" step="5"
-                                        value={weeklyInputs.gardenMinutes}
-                                        onChange={(e) => handleWeeklyInputChange('gardenMinutes', parseInt(e.target.value))}
-                                        className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Lifestyle */}
-                        <div>
-                            <span className="text-xs font-bold uppercase tracking-widest text-[#A8A29E] mb-6 block">Lifestyle (Weekly)</span>
-                            <div className="space-y-6">
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>Meat-based Meals</label>
-                                        <span className="font-serif">{weeklyInputs.meatMeals}</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="21"
-                                        value={weeklyInputs.meatMeals}
-                                        onChange={(e) => handleWeeklyInputChange('meatMeals', parseInt(e.target.value))}
-                                        className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
-                                </div>
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>New Clothing Items</label>
-                                        <span className="font-serif">{weeklyInputs.newClothingItems}</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="5"
-                                        value={weeklyInputs.newClothingItems}
-                                        onChange={(e) => handleWeeklyInputChange('newClothingItems', parseInt(e.target.value))}
-                                        className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
-                                </div>
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>Miles Driven</label>
-                                        <span className="font-serif">{weeklyInputs.milesDriven}</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="500" step="10"
-                                        value={weeklyInputs.milesDriven}
-                                        onChange={(e) => handleWeeklyInputChange('milesDriven', parseInt(e.target.value))}
-                                        className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Tech & Sustainable Actions */}
-                         <div>
-                            <span className="text-xs font-bold uppercase tracking-widest text-[#A8A29E] mb-6 block">Tech & Circularity (Weekly)</span>
-                            <div className="space-y-6">
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#5D5A53]">
-                                        <label>AI Queries (Chat/GenAI)</label>
-                                        <span className="font-serif">{weeklyInputs.aiQueries}</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="200" step="10"
-                                        value={weeklyInputs.aiQueries}
-                                        onChange={(e) => handleWeeklyInputChange('aiQueries', parseInt(e.target.value))}
-                                        className="w-full accent-[#2C2A26] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
-                                    <p className="text-[10px] text-[#A8A29E] mt-1">Data center cooling consumes ~0.13 gal per heavy session.</p>
-                                </div>
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#4A7C59]">
-                                        <label>Items Recycled (Plastic/Alum)</label>
-                                        <span className="font-serif">-{weeklyInputs.recyclingItems} credit</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="50"
-                                        value={weeklyInputs.recyclingItems}
-                                        onChange={(e) => handleWeeklyInputChange('recyclingItems', parseInt(e.target.value))}
-                                        className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
-                                </div>
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-[#4A7C59]">
-                                        <label>Compost (Lbs diverted)</label>
-                                        <span className="font-serif">-{weeklyInputs.compostLbs} lbs</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="20"
-                                        value={weeklyInputs.compostLbs}
-                                        onChange={(e) => handleWeeklyInputChange('compostLbs', parseInt(e.target.value))}
-                                        className="w-full accent-[#4A7C59] h-1.5 bg-[#D6D1C7] rounded-lg appearance-none cursor-pointer"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Summary Footer */}
-                        <div className="mt-12 pt-8 border-t border-[#D6D1C7]">
-                             <p className="text-xs text-[#A8A29E] leading-relaxed text-center">
-                                 Estimates based on research from Environment Canada, USGS, and Water Footprint Network.
-                             </p>
-                        </div>
-                    </div>
+                <div className="mt-12 pt-8 border-t border-[#E8DFC8]/50 text-center">
+                     <p className="text-xs text-[#98A89A] font-medium tracking-wide">
+                         Estimates based on research from EPA, Environment Canada, USGS, and Water Footprint Network.
+                     </p>
                 </div>
             </div>
+            {/* END PANELS */}
+
         </div>
       </div>
     </div>
   );
 };
-
 export default Dashboard;

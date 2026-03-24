@@ -21,6 +21,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, initialMode = 'login' }) => {
   const [loading, setLoading] = useState(false);
   
   // Signup Fields
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
@@ -45,6 +47,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, initialMode = 'login' }) => {
                 password,
                 options: {
                     data: {
+                        first_name: firstName,
+                        last_name: lastName,
                         username,
                         city,
                         country,
@@ -60,6 +64,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, initialMode = 'login' }) => {
                 // 2. EXPLICITLY create/ensure profile exists in DB
                 const newProfile = {
                     id: authData.user.id,
+                    first_name: firstName,
+                    last_name: lastName,
                     username: username,
                     city: city,
                     country: country,
@@ -97,6 +103,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, initialMode = 'login' }) => {
                     // User logged in immediately
                     const appUser: User = {
                         id: authData.user.id,
+                        firstName: firstName,
+                        lastName: lastName,
                         username: username,
                         email: email,
                         avatar: newProfile.avatar_url,
@@ -152,8 +160,30 @@ const Login: React.FC<LoginProps> = ({ onLogin, initialMode = 'login' }) => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {isSignUp && (
+             {isSignUp && (
                 <>
+                    <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-widest text-[#A8A29E]">First Name</label>
+                            <input 
+                                type="text" 
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                className="w-full bg-transparent border-b border-[#D6D1C7] py-2 text-[#2C2A26] focus:border-[#2C2A26] outline-none transition-colors"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-widest text-[#A8A29E]">Last Name</label>
+                            <input 
+                                type="text" 
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
+                                className="w-full bg-transparent border-b border-[#D6D1C7] py-2 text-[#2C2A26] focus:border-[#2C2A26] outline-none transition-colors"
+                                required
+                            />
+                        </div>
+                    </div>
                     <div className="space-y-2">
                         <label className="text-xs font-bold uppercase tracking-widest text-[#A8A29E]">Username</label>
                         <input 

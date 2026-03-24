@@ -6,8 +6,20 @@
     <title>FlowState - Water Conservation Tracker</title>
     <meta name="description" content="FlowState - Track your water footprint and join a global movement for conservation" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"DM Sans"', 'sans-serif'],
+              serif: ['"Lora"', 'serif'],
+            }
+          }
+        }
+      }
+    </script>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap');
       
       html {
         scroll-behavior: smooth;
@@ -15,13 +27,13 @@
       }
 
       body {
-        font-family: 'Inter', sans-serif;
+        font-family: 'DM Sans', sans-serif;
         background-color: #F5F2EB; /* Warm cream background */
         color: #2C2A26; /* Warm dark charcoal */
       }
       
       h1, h2, h3, h4, .font-serif {
-        font-family: 'Playfair Display', serif;
+        font-family: 'Lora', serif;
       }
 
       /* Hide scrollbar for clean aesthetic in horizontal scrolls if any */

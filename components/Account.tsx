@@ -160,6 +160,8 @@ const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCancel, onCrop 
 
 const Account: React.FC<AccountProps> = ({ user, onUpdateUser }) => {
   const [formData, setFormData] = useState({
+    firstName: user.firstName || '',
+    lastName: user.lastName || '',
     username: user.username,
     city: user.city,
     country: user.country,
@@ -182,6 +184,8 @@ const Account: React.FC<AccountProps> = ({ user, onUpdateUser }) => {
   useEffect(() => {
     setFormData(prev => ({
         ...prev,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
         username: user.username,
         city: user.city,
         country: user.country,
@@ -276,6 +280,8 @@ const Account: React.FC<AccountProps> = ({ user, onUpdateUser }) => {
 
         // 2. Update Profile Data
         const updates = {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
             username: formData.username,
             city: formData.city,
             country: formData.country,
@@ -310,6 +316,8 @@ const Account: React.FC<AccountProps> = ({ user, onUpdateUser }) => {
         // 4. Update Local State
         const updatedUser = {
             ...user,
+            firstName: savedProfile.first_name,
+            lastName: savedProfile.last_name,
             username: savedProfile.username,
             city: savedProfile.city,
             country: savedProfile.country,
@@ -396,6 +404,28 @@ const Account: React.FC<AccountProps> = ({ user, onUpdateUser }) => {
                     <div>
                         <h3 className="text-xs font-extrabold uppercase tracking-widest text-[#2C2A26] mb-6 border-b border-[#D6D1C7] pb-2">Profile Details</h3>
                         <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <label className="text-sm text-[#5D5A53]">First Name</label>
+                                    <input 
+                                        type="text"
+                                        name="firstName"
+                                        value={formData.firstName}
+                                        onChange={handleChange}
+                                        className="w-full bg-transparent border-b border-[#D6D1C7] py-2 text-[#2C2A26] focus:border-[#2C2A26] outline-none transition-colors"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm text-[#5D5A53]">Last Name</label>
+                                    <input 
+                                        type="text"
+                                        name="lastName"
+                                        value={formData.lastName}
+                                        onChange={handleChange}
+                                        className="w-full bg-transparent border-b border-[#D6D1C7] py-2 text-[#2C2A26] focus:border-[#2C2A26] outline-none transition-colors"
+                                    />
+                                </div>
+                            </div>
                             <div className="space-y-2">
                                 <label className="text-sm text-[#5D5A53]">Username</label>
                                 <input 

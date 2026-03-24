@@ -17,12 +17,12 @@ export const WATER_METRICS = {
   GARDEN_GPM: 12,         // Standard garden hose
   
   // Virtual Water
-  CLOTHING_AVG_GPI: 1400, // Avg item
+  CLOTHING_AVG_GPI: 800,   // Avg item
   DIET_MEAT_GPM: 450,     // Avg per meat meal
   FUEL_GPM: 0.5,          // Gallons to refine gas
   
   // Tech & Waste (New)
-  AI_QUERY_GPQ: 0.13,     // ~500ml water consumption per session/heavy query (cooling)
+  AI_QUERY_GPQ: 0.005,    // ~19ml water consumption per session/heavy query (cooling)
   RECYCLING_CREDIT: -5,   // Gallons SAVED per item recycled vs virgin production
   COMPOST_CREDIT: -15,    // Gallons SAVED per lb of food waste (soil moisture retention + avoidance of landfill methane/water use)
 };

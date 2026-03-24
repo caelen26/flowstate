@@ -11,6 +11,8 @@ export interface User {
   username: string;
   email: string;
   password?: string; // Added for auth verification
+  firstName: string;
+  lastName: string;
   avatar: string;
   city: string;
   country: string;

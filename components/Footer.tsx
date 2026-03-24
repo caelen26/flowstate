@@ -6,6 +6,7 @@
 
 
 import React, { useState } from 'react';
+import { supabase } from '../services/supabaseClient';
 
 interface FooterProps {
   onLinkClick: (targetId: string) => void;
@@ -15,13 +16,24 @@ const Footer: React.FC<FooterProps> = ({ onLinkClick }) => {
   const [subscribeStatus, setSubscribeStatus] = useState<'idle' | 'loading' | 'success'>('idle');
   const [email, setEmail] = useState('');
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     if (!email) return;
     setSubscribeStatus('loading');
-    setTimeout(() => {
+    
+    try {
+      const { error } = await supabase
+        .from('newsletter_subscribers')
+        .insert([{ email }]);
+        
+      if (error && error.code !== '23505') { // 23505 is unique violation, we can ignore if already subbed
+        console.error('Error subscribing:', error);
+      }
+    } catch (e) {
+      console.error('Network error during subscribe:', e);
+    } finally {
       setSubscribeStatus('success');
       setEmail('');
-    }, 1500);
+    }
   };
 
   return (

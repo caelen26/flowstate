@@ -1,11 +1,7 @@
-
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
-*/
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BRAND_NAME } from '../constants';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 
 interface NavbarProps {
   onNavClick: (targetId: string) => void;
@@ -17,6 +13,8 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ onNavClick, activeView, onLogout, isAuthenticated }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navRef = useRef<HTMLDivElement>(null);
+  const linksRef = useRef<(HTMLAnchorElement | null)[]>([]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,44 +24,45 @@ const Navbar: React.FC<NavbarProps> = ({ onNavClick, activeView, onLogout, isAut
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useGSAP(() => {
+    // Entrance animation for links
+    if (linksRef.current.length > 0) {
+        gsap.fromTo(linksRef.current, 
+            { opacity: 0, y: -10 },
+            { opacity: 1, y: 0, stagger: 0.05, duration: 0.8, ease: "power2.out", delay: 0.4 }
+        );
+    }
+  }, []);
+
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>, target: string) => {
     e.preventDefault();
     setMobileMenuOpen(false);
     onNavClick(target);
   };
 
-  // Logic: Only use the transparent/white-text style if we are on the landing page AND at the top.
-  // Otherwise (scrolled OR not on landing page), use the solid/dark-text style.
   const isLanding = activeView === 'landing';
   const useSolidStyle = !isLanding || scrolled || mobileMenuOpen;
 
-  // Dynamic classes
+  // Floating Pill Dynamic Styles
   const navContainerClass = useSolidStyle 
-    ? 'bg-[#F5F2EB]/90 backdrop-blur-md py-4 shadow-sm text-[#2C2A26]' 
-    : 'bg-[#2C2A26]/0 py-6 text-[#F5F2EB]';
+    ? 'bg-[#F5F2EB]/95 backdrop-blur-xl py-3 shadow-lg border border-[#2C2A26]/5 rounded-full mt-4 w-[calc(100%-2rem)] max-w-5xl mx-auto px-6 text-[#2C2A26]' 
+    : 'bg-transparent py-6 rounded-none mt-0 w-full max-w-[1800px] mx-auto px-4 md:px-8 text-[#F5F2EB]';
   
-  const linkClass = `transition-colors duration-500 hover:opacity-60 ${
-      useSolidStyle ? 'text-[#2C2A26]' : 'text-[#F5F2EB]'
-  }`;
-
   const logoClass = `text-2xl font-serif font-medium tracking-tight transition-colors duration-500 ${
       useSolidStyle ? 'text-[#2C2A26]' : 'text-[#F5F2EB]'
   }`;
 
-  // Button styles
-  const buttonBaseClass = "text-xs font-bold uppercase tracking-widest px-6 py-2.5 rounded-full transition-all duration-300 border";
-  const outlineButtonClass = useSolidStyle 
-    ? `border-[#2C2A26] text-[#2C2A26] hover:bg-[#2C2A26] hover:text-[#F5F2EB]` 
-    : `border-[#F5F2EB] text-[#F5F2EB] hover:bg-[#F5F2EB] hover:text-[#2C2A26]`;
-
   return (
     <>
       <nav 
-        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-700 ease-in-out ${navContainerClass}`}
+        className={`fixed top-0 left-0 right-0 z-[100] grid place-items-center transition-all duration-700 pointer-events-none`}
       >
-        <div className="max-w-[1800px] mx-auto px-4 md:px-8 relative flex items-center justify-between">
+        <div 
+          ref={navRef}
+          className={`relative flex items-center justify-between pointer-events-auto transition-all duration-[600ms] ease-[cubic-bezier(0.25,1,0.5,1)] ${navContainerClass}`}
+        >
           {/* Logo */}
-          <div className="z-50">
+          <div className="z-50 shrink-0">
             <a 
                 href="#" 
                 onClick={(e) => handleLinkClick(e, isAuthenticated ? 'dashboard' : 'landing')}
@@ -73,48 +72,67 @@ const Navbar: React.FC<NavbarProps> = ({ onNavClick, activeView, onLogout, isAut
             </a>
           </div>
           
-          {/* Center Links - Absolutely Centered */}
+          {/* Center Links */}
           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden lg:flex items-center gap-12 text-sm font-medium tracking-widest uppercase">
-            <div className={`transition-colors duration-500 flex gap-12 ${useSolidStyle ? 'text-[#2C2A26]' : 'text-[#F5F2EB]'}`}>
+            <div className={`transition-colors duration-500 flex gap-10 ${useSolidStyle ? 'text-[#2C2A26]' : 'text-[#F5F2EB]'}`}>
                 {isAuthenticated ? (
                     <>
-                        <a href="#" onClick={(e) => handleLinkClick(e, 'dashboard')} className={`hover:opacity-60 transition-opacity ${activeView === 'dashboard' ? 'underline underline-offset-4' : ''}`}>Dashboard</a>
-                        <a href="#" onClick={(e) => handleLinkClick(e, 'leaderboard')} className={`hover:opacity-60 transition-opacity ${activeView === 'leaderboard' ? 'underline underline-offset-4' : ''}`}>Leaderboard</a>
-                        <a href="#" onClick={(e) => handleLinkClick(e, 'community')} className={`hover:opacity-60 transition-opacity ${activeView === 'community' ? 'underline underline-offset-4' : ''}`}>Community</a>
-                        <a href="#" onClick={(e) => handleLinkClick(e, 'events')} className={`hover:opacity-60 transition-opacity ${activeView === 'events' ? 'underline underline-offset-4' : ''}`}>Events</a>
+                        {['Dashboard', 'Leaderboard', 'Community', 'Events'].map((item, i) => (
+                           <a key={item} href="#" ref={(el: HTMLAnchorElement | null) => { linksRef.current[i] = el; }}
+                              onClick={(e) => handleLinkClick(e, item.toLowerCase())} 
+                              className={`inline-block hover:opacity-60 transition-opacity ${activeView === item.toLowerCase() ? 'underline underline-offset-4' : ''}`}>
+                                {item}
+                           </a>
+                        ))}
                     </>
                 ) : (
-                     <a href="#" onClick={(e) => handleLinkClick(e, 'about')} className="hover:opacity-60 transition-opacity">About</a>
+                     <a href="#" ref={(el: HTMLAnchorElement | null) => { linksRef.current[0] = el; }}
+                        onClick={(e) => handleLinkClick(e, 'about')} 
+                        className="inline-block hover:opacity-60 transition-opacity">
+                            About
+                     </a>
                 )}
             </div>
           </div>
 
           {/* Right Actions */}
-          <div className={`flex items-center gap-6 z-50 transition-colors duration-500 ${useSolidStyle ? 'text-[#2C2A26]' : 'text-[#F5F2EB]'}`}>
+          <div className={`flex items-center gap-6 z-50 shrink-0 transition-colors duration-500 ${useSolidStyle ? 'text-[#2C2A26]' : 'text-[#F5F2EB]'}`}>
              {isAuthenticated ? (
                 <>
                     <button 
                       onClick={(e) => handleLinkClick(e, 'account')}
-                      className="text-xs font-medium uppercase tracking-widest hover:opacity-60 transition-opacity hidden sm:block"
+                      className="inline-block text-xs font-medium uppercase tracking-widest hover:opacity-60 transition-opacity hidden sm:block"
                     >
                       Account
                     </button>
-                    {/* Divider */}
                     <span className="hidden sm:block opacity-30">|</span>
                     <button 
                       onClick={onLogout}
-                      className="text-xs font-medium uppercase tracking-widest hover:opacity-60 transition-opacity hidden sm:block"
+                      className="inline-block text-xs font-medium uppercase tracking-widest hover:opacity-60 transition-opacity hidden sm:block"
                     >
                       Log Out
                     </button>
                 </>
              ) : (
                  <div className="hidden sm:flex items-center gap-4">
+                    {/* Button with Sliding Cover */}
                     <button 
                         onClick={(e) => handleLinkClick(e, 'auth')}
-                        className={`${buttonBaseClass} ${outlineButtonClass}`}
+                        className={`relative overflow-hidden group outline-none text-xs font-bold uppercase tracking-widest px-8 py-3 rounded-full border transition-colors duration-300 ${
+                          useSolidStyle 
+                           ? `border-[#2C2A26] text-[#2C2A26]` 
+                           : `border-[#F5F2EB]/40 bg-white/5 text-[#F5F2EB]`
+                        }`}
                     >
-                        Log In
+                        {/* Slide color depending on style */}
+                        <span className={`absolute inset-0 w-full h-full translate-y-[100%] rounded-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${
+                            useSolidStyle ? 'bg-[#2C2A26]' : 'bg-[#F5F2EB]'
+                        }`}></span>
+                        <span className={`relative z-10 transition-colors duration-500 ${
+                            useSolidStyle ? 'group-hover:text-[#F5F2EB]' : 'group-hover:text-[#2C2A26]'
+                        }`}>
+                            Log In
+                        </span>
                     </button>
                 </div>
              )}

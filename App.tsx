@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
+import CustomCursor from './components/CustomCursor';
 import Hero from './components/Hero';
 import About from './components/About';
 import Dashboard from './components/Dashboard';
@@ -78,11 +79,13 @@ function App() {
          if (authUser) {
              const newProfile = {
                  id: authUser.id,
+                 first_name: authUser.user_metadata?.first_name || '',
+                 last_name: authUser.user_metadata?.last_name || '',
                  username: authUser.user_metadata?.username || authUser.email?.split('@')[0] || 'User',
                  city: authUser.user_metadata?.city || 'Unknown',
                  country: authUser.user_metadata?.country || 'Unknown',
                  household_size: parseInt(authUser.user_metadata?.household_size || '1'),
-                 avatar_url: `https://i.pravatar.cc/150?u=${authUser.id}`,
+                 avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.user_metadata?.first_name || authUser.user_metadata?.username || 'User')}&background=EBE7DE&color=2C2A26`,
                  joined_date: new Date().toISOString().split('T')[0],
                  monthly_usage: 0
              };
@@ -134,9 +137,11 @@ function App() {
       // Map DB snake_case to App camelCase
       const appUser: User = {
         id: profile.id,
+        firstName: profile.first_name || '',
+        lastName: profile.last_name || '',
         username: profile.username,
         email: 'user@flowstate.app', // Email is hidden in profile, handled by auth
-        avatar: profile.avatar_url || 'https://i.pravatar.cc/150?u=default',
+        avatar: profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.first_name || profile.username || 'User')}&background=EBE7DE&color=2C2A26`,
         city: profile.city,
         country: profile.country,
         householdSize: profile.household_size,
@@ -241,7 +246,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F2EB] font-sans text-[#2C2A26] selection:bg-[#D6D1C7] selection:text-[#2C2A26]">
+    <div className="min-h-screen bg-[#F5F2EB] font-sans text-[#2C2A26] selection:bg-[#D6D1C7] selection:text-[#2C2A26] cursor-none">
+      <CustomCursor />
       <Navbar 
         onNavClick={handleNavClick}
         activeView={view.type}
