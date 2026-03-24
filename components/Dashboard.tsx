@@ -508,27 +508,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
           </h1>
           <p className="text-lg text-[#789094] font-medium mb-12 text-center">Your personal conservation journal.</p>
 
-          <div className="flex flex-col md:flex-row items-center justify-between w-full max-w-4xl mx-auto relative z-10">
+          <div className="flex flex-col items-center w-full max-w-4xl mx-auto relative z-10 gap-8">
             
-            {/* Weekly Usage Stats */}
-            <div className="flex flex-col items-center md:items-end flex-1 pr-0 md:pr-12 group cursor-default">
-              <span className="text-sm font-bold uppercase tracking-widest text-[#789094] mb-2 opacity-80 group-hover:opacity-100 transition-opacity">Weekly Est.</span>
-              <div className="flex items-baseline gap-2 mb-2">
-                 <span className="text-6xl md:text-8xl font-serif text-[#2C2A26] tracking-tight">
-                    <AnimatedNumber value={Math.round(stats.grandTotal)} />
-                 </span>
-                 <span className="text-xl text-[#98A89A] ml-2 font-light">gal</span>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                 <span className="bg-[#98A89A]/20 text-[#5F7A65] px-3 py-1 rounded-full text-xs font-bold tracking-wide">
-                   <AnimatedNumber value={Math.abs(Math.round(stats.trend))} />% {stats.trend > 0 ? 'above' : 'below'} avg
-                 </span>
-              </div>
-            </div>
-
-            {/* Centerpiece: Score Ring */}
+            {/* Centerpiece: Score Ring - always centered */}
             <div className="flex flex-col items-center relative group shrink-0">
-              <div className="w-56 h-56 md:w-64 md:h-64 relative flex items-center justify-center bg-white rounded-full shadow-[0_8px_40px_rgba(152,168,154,0.15)] group-hover:-translate-y-2 group-hover:shadow-[0_15px_50px_rgba(152,168,154,0.25)] transition-all duration-700">
+              <div className="w-52 h-52 md:w-64 md:h-64 relative flex items-center justify-center bg-white rounded-full shadow-[0_8px_40px_rgba(152,168,154,0.15)] group-hover:-translate-y-2 group-hover:shadow-[0_15px_50px_rgba(152,168,154,0.25)] transition-all duration-700">
                 <svg className="w-full h-full absolute inset-0 -rotate-90 p-3" viewBox="0 0 36 36">
                   <path className="text-[#F5F0E8]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="1.5" />
                   <path className="text-[#98A89A] transition-all duration-1000 ease-out" strokeDasharray={`${stats.score}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -545,14 +529,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
               </h3>
             </div>
 
-            {/* Streak */}
-            <div className="flex flex-col items-center md:items-start flex-1 pl-0 md:pl-12 group cursor-default">
-              <span className="text-sm font-bold uppercase tracking-widest text-[#789094] mb-3 opacity-80 group-hover:opacity-100 transition-opacity">Streak</span>
-              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border border-[#D5D0C6] flex flex-col items-center justify-center bg-white/50 shadow-sm group-hover:-translate-y-1 group-hover:shadow-md transition-all duration-500">
-                <span className="text-4xl md:text-5xl font-serif text-[#2C2A26]">
-                   <AnimatedNumber value={streakData.currentStreak} />
-                </span>
-                <span className="text-[10px] text-[#98A89A] uppercase font-bold tracking-wider mt-1">Days</span>
+            {/* Weekly + Streak row — side by side on all sizes */}
+            <div className="flex flex-row items-center justify-center gap-8 w-full">
+              {/* Weekly Usage Stats */}
+              <div className="flex flex-col items-center group cursor-default">
+                <span className="text-xs font-bold uppercase tracking-widest text-[#789094] mb-1 opacity-80 group-hover:opacity-100 transition-opacity">Weekly Est.</span>
+                <div className="flex items-baseline gap-1 mb-1">
+                   <span className="text-4xl md:text-6xl font-serif text-[#2C2A26] tracking-tight">
+                      <AnimatedNumber value={Math.round(stats.grandTotal)} />
+                   </span>
+                   <span className="text-base text-[#98A89A] font-light">gal</span>
+                </div>
+                <div className="flex items-center gap-2">
+                   <span className="bg-[#98A89A]/20 text-[#5F7A65] px-3 py-1 rounded-full text-xs font-bold tracking-wide">
+                     <AnimatedNumber value={Math.abs(Math.round(stats.trend))} />% {stats.trend > 0 ? 'above' : 'below'} avg
+                   </span>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="w-px h-16 bg-[#D6D1C7]/50"></div>
+
+              {/* Streak */}
+              <div className="flex flex-col items-center group cursor-default">
+                <span className="text-xs font-bold uppercase tracking-widest text-[#789094] mb-2 opacity-80 group-hover:opacity-100 transition-opacity">Streak</span>
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border border-[#D5D0C6] flex flex-col items-center justify-center bg-white/50 shadow-sm group-hover:-translate-y-1 group-hover:shadow-md transition-all duration-500">
+                  <span className="text-3xl md:text-4xl font-serif text-[#2C2A26]">
+                     <AnimatedNumber value={streakData.currentStreak} />
+                  </span>
+                  <span className="text-[10px] text-[#98A89A] uppercase font-bold tracking-wider mt-0.5">Days</span>
+                </div>
               </div>
             </div>
           </div>

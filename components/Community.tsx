@@ -66,6 +66,7 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
       time: ''
   });
   const [submittingEvent, setSubmittingEvent] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -193,7 +194,6 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
 
       } catch (e: any) {
           console.error("Error creating group:", getErrorMessage(e));
-          alert("Failed to create group: " + getErrorMessage(e));
       }
   };
 
@@ -242,6 +242,10 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
       if (!activeGroupId) return;
       setPostsLoading(true);
       try {
+          // Auto-expire: only fetch posts from the last 7 days
+          const oneWeekAgo = new Date();
+          oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
           const { data, error } = await supabase
             .from('posts')
             .select(`
@@ -255,6 +259,7 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
                 profiles (username, first_name, avatar_url)
             `)
             .eq('group_id', activeGroupId)
+            .gte('created_at', oneWeekAgo.toISOString())
             .order('created_at', { ascending: false })
             .limit(50);
 
@@ -289,7 +294,7 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
           const { data: { user } } = await supabase.auth.getUser();
           
           if (!user) {
-              alert("You must be logged in to post.");
+              console.error("User must be logged in to post.");
               return;
           }
 
@@ -315,7 +320,6 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
 
       } catch (e: any) {
           console.error("Error creating post:", getErrorMessage(e));
-          alert("Failed to share post: " + getErrorMessage(e));
       } finally {
           setPosting(false);
       }
@@ -334,7 +338,6 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
 
       } catch (e: any) {
           console.error("Error deleting post:", getErrorMessage(e));
-          alert("Could not delete post: " + getErrorMessage(e));
       }
   };
 
@@ -343,7 +346,11 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
       setEventsLoading(true);
       try {
           const { data: { user } } = await supabase.auth.getUser();
-          
+
+          // Auto-expire: only fetch events that ended less than 7 days ago or are upcoming
+          const oneWeekAgo = new Date();
+          oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
           // Fetch events and check if the current user is a participant
           const { data, error } = await supabase
             .from('events')
@@ -352,6 +359,7 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
                 profiles (username, avatar_url),
                 event_participants (user_id)
             `)
+            .gte('event_date', oneWeekAgo.toISOString())
             .order('event_date', { ascending: true });
 
           if (error) throw error;
@@ -456,14 +464,13 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
 
       } catch (e: any) {
           console.error("Error saving event:", getErrorMessage(e));
-          alert(`Failed to save event: ${getErrorMessage(e)}`);
       } finally {
           setSubmittingEvent(false);
       }
   };
 
   const handleDeleteEvent = async () => {
-      if (!editingEventId || !window.confirm("Are you sure you want to delete this event? This cannot be undone.")) return;
+      if (!editingEventId) return;
       setSubmittingEvent(true);
       try {
           const { error } = await supabase
@@ -473,11 +480,11 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
           
           if (error) throw error;
           
+          setConfirmingDelete(false);
           setShowEventModal(false);
           fetchEvents();
       } catch (e: any) {
            console.error("Error deleting event:", getErrorMessage(e));
-           alert("Failed to delete event.");
       } finally {
            setSubmittingEvent(false);
       }
@@ -594,10 +601,9 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
                 {/* --- DESKTOP SIDEBAR: COMMUNITIES LIST --- */}
                 <div className="hidden lg:block lg:col-span-3 space-y-8">
                     <div className="bg-[#FDFAF5] border border-[#D6D1C7] p-6 shadow-sm lg:sticky lg:top-32 rounded-2xl">
-                        <div className="mb-8 pb-6 border-b border-[#D6D1C7]/50 text-center">
-                            <span className="text-4xl mb-3 block">🌊</span>
-                            <div className="font-serif text-[#2C2A26] text-2xl mb-1">24,405</div>
-                            <div className="text-[10px] font-bold uppercase tracking-widest text-[#98A89A]">members conserving together</div>
+                        <div className="mb-6 pb-6 border-b border-[#D6D1C7]/50 text-center">
+                            <span className="text-3xl mb-2 block">🌊</span>
+                            <p className="text-xs text-[#98A89A] font-medium">Water Conservation Community</p>
                         </div>
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="font-extrabold text-lg text-[#2C2A26]">Communities</h3>
@@ -624,7 +630,6 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
                                                 </div>
                                                 <div>
       <span className="text-sm font-bold block mb-0.5">{group.name}</span>
-      <span className="text-[10px] text-[#A8A29E] block mb-1 uppercase tracking-widest">{(group.name.length * 123) % 1000 + 100} Members</span>
       <span className="text-xs opacity-70 line-clamp-2 leading-relaxed">{group.description || 'A community dedicated to water conservation.'}</span>
   </div>
                                             </button>
@@ -651,7 +656,6 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
                                                 </div>
                                                 <div>
       <span className="text-sm font-bold block mb-0.5">{group.name}</span>
-      <span className="text-[10px] text-[#A8A29E] block mb-1 uppercase tracking-widest">{(group.name.length * 123) % 1000 + 100} Members</span>
       <span className="text-xs opacity-70 line-clamp-2 leading-relaxed">{group.description || 'A community dedicated to water conservation.'}</span>
   </div>
                                             </button>
@@ -824,8 +828,8 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
     <div className="min-h-screen bg-[#F5F2EB] pt-24 md:pt-32 px-4 md:px-6 pb-12 relative">
        {/* Create/Edit Event Modal */}
        {showEventModal && (
-           <div className="fixed inset-0 z-50 bg-[#2C2A26]/80 backdrop-blur-sm flex items-center justify-center p-4">
-               <div className="bg-[#F5F2EB] w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-fade-in-up border border-[#D6D1C7]">
+           <div className="fixed inset-0 z-[110] bg-[#2C2A26]/80 backdrop-blur-sm flex items-center justify-center p-4 pt-20 md:pt-4">
+               <div className="bg-[#F5F2EB] w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-fade-in-up border border-[#D6D1C7]">
                    
                    {/* Modal Header */}
                    <div className="p-6 md:p-8 border-b border-[#D6D1C7] flex justify-between items-start bg-white/50">
@@ -912,7 +916,7 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
                             </div>
 
                             {/* Actions */}
-                            <div className="pt-6 flex flex-col gap-4">
+                            <div className="pt-6 flex flex-col gap-3">
                                 <button 
                                         type="submit"
                                         disabled={submittingEvent}
@@ -922,14 +926,37 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
                                 </button>
                                 
                                 {editingEventId && (
-                                    <button 
-                                        type="button"
-                                        onClick={handleDeleteEvent}
-                                        disabled={submittingEvent}
-                                        className="w-full py-3 border border-red-200 text-red-800 text-xs font-bold uppercase tracking-widest hover:bg-red-50 disabled:opacity-50 transition-colors"
-                                    >
-                                        Delete Event
-                                    </button>
+                                    !confirmingDelete ? (
+                                        <button 
+                                            type="button"
+                                            onClick={() => setConfirmingDelete(true)}
+                                            disabled={submittingEvent}
+                                            className="w-full py-3 border border-red-200 text-red-400 text-xs font-bold uppercase tracking-widest hover:bg-red-50 disabled:opacity-50 transition-colors"
+                                        >
+                                            Delete Event
+                                        </button>
+                                    ) : (
+                                        <div className="border border-red-200 bg-red-50 p-4 rounded">
+                                            <p className="text-xs text-red-700 text-center mb-3 font-medium">This will permanently delete the event.</p>
+                                            <div className="flex gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setConfirmingDelete(false)}
+                                                    className="flex-1 py-2 border border-[#D6D1C7] text-[#5D5A53] text-xs font-bold uppercase tracking-widest hover:bg-white transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleDeleteEvent}
+                                                    disabled={submittingEvent}
+                                                    className="flex-1 py-2 bg-red-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                                >
+                                                    {submittingEvent ? 'Deleting...' : 'Yes, Delete'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )
                                 )}
                             </div>
                         </form>
