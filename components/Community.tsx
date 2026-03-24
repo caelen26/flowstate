@@ -669,23 +669,9 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
 
                 {/* --- MAIN FEED --- */}
                 <div className="lg:col-span-9 animate-fade-in-up">
-                    <div id="feed-header" className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b border-[#D6D1C7] pb-6 gap-4">
-                        <div>
-                            <h2 className="text-2xl md:text-3xl font-serif text-[#2C2A26] mb-2 font-extrabold">{activeGroupName}</h2>
-                            <p className="text-[#5D5A53] text-sm font-light max-w-2xl leading-relaxed">{activeGroupDesc}</p>
-                        </div>
-                        {activeGroupId && (
-                            <button 
-                                onClick={() => handleJoinToggle(groups.find(g => g.id === activeGroupId)!)}
-                                className={`w-full md:w-auto px-6 py-3 md:py-2 text-xs font-bold uppercase tracking-widest border transition-all ${
-                                    myGroupIds.has(activeGroupId) 
-                                        ? 'border-[#D6D1C7] text-[#A8A29E] hover:border-red-300 hover:text-red-400' 
-                                        : 'bg-[#2C2A26] text-white border-[#2C2A26] hover:bg-[#444]'
-                                }`}
-                            >
-                                {myGroupIds.has(activeGroupId) ? 'Leave Group' : 'Join Group'}
-                            </button>
-                        )}
+                    <div id="feed-header" className="mb-8 border-b border-[#D6D1C7] pb-6">
+                        <h2 className="text-2xl md:text-3xl font-serif text-[#2C2A26] mb-2 font-extrabold">{activeGroupName}</h2>
+                        <p className="text-[#5D5A53] text-sm font-light max-w-2xl leading-relaxed">{activeGroupDesc}</p>
                     </div>
                     
                     {/* Post Input */}
@@ -815,6 +801,18 @@ const Community: React.FC<CommunityProps> = ({ initialTab = 'feed' }) => {
                             )
                         )}
                     </div>
+
+                    {/* Leave Group — buried at the bottom, small and muted */}
+                    {activeGroupId && myGroupIds.has(activeGroupId) && (
+                        <div className="mt-16 pt-6 border-t border-[#D6D1C7]/30 text-center">
+                            <button
+                                onClick={() => handleJoinToggle(groups.find(g => g.id === activeGroupId)!)}
+                                className="text-[#C4BFB5] hover:text-red-400 text-[11px] uppercase tracking-widest font-medium transition-colors"
+                            >
+                                Leave group
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
