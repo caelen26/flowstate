@@ -45,20 +45,20 @@ const Assistant: React.FC<AssistantProps> = ({ user }) => {
     const d = user.dashboardData.inputs;
     const householdDivisor = Math.max(1, user.householdSize || 1);
     
-    // Calculate actual gallons for context
-    const showerGal = Math.round(d.showerMinutes * WATER_METRICS.SHOWER_GPM * 7);
-    const bathGal = Math.round(d.baths * WATER_METRICS.BATH_GPB);
-    const faucetGal = Math.round(d.faucetMinutes * WATER_METRICS.FAUCET_GPM * 7);
-    const toiletGal = Math.round(d.flushes * WATER_METRICS.FLUSH_GPF * 7);
-    const dietGal = Math.round(d.meatMeals * WATER_METRICS.DIET_MEAT_GPM);
-    const clothingGal = Math.round(d.newClothingItems * WATER_METRICS.CLOTHING_AVG_GPI);
+    // Calculate actual litres for context
+    const showerL = Math.round(d.showerMinutes * WATER_METRICS.SHOWER_LITRES_PER_MINUTE * 7);
+    const bathL = Math.round(d.baths * WATER_METRICS.BATH_LITRES_PER_TUB);
+    const faucetL = Math.round(d.faucetMinutes * WATER_METRICS.FAUCET_LITRES_PER_MINUTE * 7);
+    const toiletL = Math.round(d.flushes * WATER_METRICS.TOILET_LITRES_PER_FLUSH * 7);
+    const dietL = Math.round(d.meatMeals * WATER_METRICS.MEAT_BEEF_LITRES_PER_MEAL);
+    const clothingL = Math.round(d.newClothingItems * WATER_METRICS.CLOTHING_LITRES_PER_ITEM);
     
     // Shared
-    const gardenGal = Math.round((d.gardenMinutes * WATER_METRICS.GARDEN_GPM) / householdDivisor);
-    const laundryGal = Math.round((d.laundryLoads * WATER_METRICS.LAUNDRY_GPL) / householdDivisor);
+    const gardenL = Math.round((d.gardenMinutes * WATER_METRICS.GARDEN_SPRINKLER_LITRES_PER_MINUTE) / householdDivisor);
+    const laundryL = Math.round((d.laundryLoads * WATER_METRICS.LAUNDRY_LITRES_PER_LOAD_HE) / householdDivisor);
 
-    const totalDirect = showerGal + bathGal + faucetGal + toiletGal + laundryGal + gardenGal;
-    const totalVirtual = dietGal + clothingGal;
+    const totalDirect = showerL + bathL + faucetL + toiletL + laundryL + gardenL;
+    const totalVirtual = dietL + clothingL;
 
     return `
       User Name: ${user.username}
@@ -68,22 +68,22 @@ const Assistant: React.FC<AssistantProps> = ({ user }) => {
       WEEKLY WATER USAGE DATA (Calculated):
       
       -- Direct Usage (Hygiene & Home) --
-      - Showers: ${d.showerMinutes} mins/day -> ${showerGal} gal/week
-      - Baths: ${d.baths} per week -> ${bathGal} gal/week
-      - Toilet Flushes: ${d.flushes} per day -> ${toiletGal} gal/week
-      - Faucets: ${d.faucetMinutes} mins/day -> ${faucetGal} gal/week
-      - Laundry: ${d.laundryLoads} loads/week (Shared) -> ${laundryGal} gal/week (My Share)
-      - Garden: ${d.gardenMinutes} mins/week (Shared) -> ${gardenGal} gal/week (My Share)
+      - Showers: ${d.showerMinutes} mins/day -> ${showerL} L/week
+      - Baths: ${d.baths} per week -> ${bathL} L/week
+      - Toilet Flushes: ${d.flushes} per day -> ${toiletL} L/week
+      - Faucets: ${d.faucetMinutes} mins/day -> ${faucetL} L/week
+      - Laundry: ${d.laundryLoads} loads/week (Shared) -> ${laundryL} L/week (My Share)
+      - Garden: ${d.gardenMinutes} mins/week (Shared) -> ${gardenL} L/week (My Share)
       
       -- Virtual & Lifestyle --
-      - Meat Meals: ${d.meatMeals} per week -> ${dietGal} gal/week
-      - Clothing: ${d.newClothingItems} items/week -> ${clothingGal} gal/week
+      - Meat Meals: ${d.meatMeals} per week -> ${dietL} L/week
+      - Clothing: ${d.newClothingItems} items/week -> ${clothingL} L/week
       - AI Queries: ${d.aiQueries} per week
       
       -- TOTALS --
-      Total Direct Usage: ${totalDirect} gal/week
-      Total Virtual Usage: ${totalVirtual} gal/week
-      Total Footprint: ${totalDirect + totalVirtual} gal/week
+      Total Direct Usage: ${totalDirect} L/week
+      Total Virtual Usage: ${totalVirtual} L/week
+      Total Footprint: ${totalDirect + totalVirtual} L/week
     `;
   };
 

@@ -17,7 +17,7 @@ export interface User {
   city: string;
   country: string;
   householdSize: number;
-  monthlyUsage: number; // Gallons
+  monthlyUsage: number; // Litres
   joinedDate?: string;
 
   // Persistence for Dashboard

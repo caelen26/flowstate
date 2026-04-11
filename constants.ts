@@ -8,23 +8,58 @@ import React from 'react';
 import { LeaderboardEntry, Post, Event, JournalArticle, Product } from './types';
 
 export const WATER_METRICS = {
-  SHOWER_GPM: 2.1,        // EPA WaterSense Standard
-  BATH_GPB: 40,           // Avg Bathtub
-  FAUCET_GPM: 1.5,        // Standard aerator
-  FLUSH_GPF: 1.6,         // Modern standard
-  LAUNDRY_GPL: 30,        // High efficiency
-  DISHWASHER_GPC: 6,      // Energy Star
-  GARDEN_GPM: 12,         // Standard garden hose
+  // Source: Canada WaterPortal / Brock University UNESCO Chair on Water
+  // Average Canadian water footprint: ~6,000 L/person/day including virtual water
+  // For a household of 4, weekly footprint baseline = 6,000 × 4 × 7 = 168,000 L/week
+  // Use 6,000 L/person/day as the per-person daily footprint baseline
+  DAILY_BASELINE_PER_PERSON: 6000,
+  WEEKLY_BASELINE: 168000,
   
+  // For display contrast, also store direct tap use baseline:
+  // Source: Statistics Canada, Survey of Drinking Water Plants, 2021
+  DAILY_TAP_BASELINE_PER_PERSON: 223,
+  
+  // "Ideal" target should be approximately 40% below baseline
+  // Represents a meaningfully conservation-minded household
+  IDEAL_WEEKLY_TARGET: 100000,
+
+  // Direct Usage (Tap)
+  // Source: Natural Resources Canada, Proposed Canadian max efficient standard = 6.8 L/min. Avg = ~8 L/min.
+  SHOWER_LITRES_PER_MINUTE: 8.0,
+  // Source: Natural Resources Canada, Recommended faucet aerator: less than 4.7 L/min
+  FAUCET_LITRES_PER_MINUTE: 4.7,
+  // Source: Canadian Building Code / NRCan. Federal standard = 6 L/flush max. HET = 4.8 L/flush.
+  TOILET_LITRES_PER_FLUSH: 6.0,
+  TOILET_HET_LITRES_PER_FLUSH: 4.8,
+  // Source: AWWA North American Residential Water Use Study
+  BATH_LITRES_PER_TUB: 115.0,
+  // Source: Safe Drinking Water Foundation (citing Government of Canada data)
+  GARDEN_HOSE_LITRES_PER_MINUTE: 45.0,
+  GARDEN_SPRINKLER_LITRES_PER_MINUTE: 19.0,
+
+  // Shared Household Usage
+  // Source: ENERGY STAR Canada (aligned with US ENERGY STAR program)
+  LAUNDRY_LITRES_PER_LOAD_HE: 53.0,
+  LAUNDRY_LITRES_PER_LOAD_STANDARD: 76.0,
+  // Source: ENERGY STAR Canada / Home Water Works
+  DISHWASHER_LITRES_PER_CYCLE_ENERGYSTAR: 13.0,
+  DISHWASHER_LITRES_PER_CYCLE_STANDARD: 19.0,
+
   // Virtual Water
-  CLOTHING_AVG_GPI: 800,   // Avg item
-  DIET_MEAT_GPM: 450,     // Avg per meat meal
-  FUEL_GPM: 0.5,          // Gallons to refine gas
-  
-  // Tech & Waste (New)
-  AI_QUERY_GPQ: 0.005,    // ~19ml water consumption per session/heavy query (cooling)
-  RECYCLING_CREDIT: -5,   // Gallons SAVED per item recycled vs virgin production
-  COMPOST_CREDIT: -15,    // Gallons SAVED per lb of food waste (soil moisture retention + avoidance of landfill methane/water use)
+  // Source: University of Manitoba + Agriculture and Agri-Food Canada (AAFC), 2017
+  MEAT_BEEF_LITRES_PER_MEAL: 1700.0,
+  // Source: Water Footprint Network. Avg across clothing types ~3000 L, t-shirt = 2700 L
+  CLOTHING_LITRES_PER_ITEM: 2700.0,
+  // Source: FoodPrint.org citing USDA, converted to metric
+  TRANSPORT_LITRES_PER_KM: 0.5,
+  // Source: University of California Riverside / EESI (2023)
+  AI_LITRES_PER_QUERY: 0.019,
+
+  // Conservation Credits
+  // Source: Water Footprint Calculator. Recycling 1 lb paper = ~13 L
+  RECYCLING_LITRES_SAVED_PER_ITEM: 13.0,
+  // Source: EPA. Composting 1 lb food waste saves ~15 gallons = ~57 L
+  COMPOSTING_LITRES_SAVED_PER_KG: 57.0,
 };
 
 export const LEADERBOARD_DATA: LeaderboardEntry[] = [

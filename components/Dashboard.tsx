@@ -15,7 +15,7 @@ interface DashboardProps {
 }
 
 // --- Research-Backed Constants ---
-const BASELINE_CANADIAN_WEEKLY = 4200;
+const BASELINE_CANADIAN_WEEKLY = 168000;
 
 const DEFAULT_DAILY_INPUTS: DailyHygieneMetrics = {
     showerMinutes: 8,
@@ -250,36 +250,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
     const householdDivisor = Math.max(1, user.householdSize || 1);
 
     // Weekly Calculations
-    const showerWeekly = inputs.showerMinutes * WATER_METRICS.SHOWER_GPM * 7;
-    const bathWeekly = inputs.baths * WATER_METRICS.BATH_GPB;
-    const faucetWeekly = inputs.faucetMinutes * WATER_METRICS.FAUCET_GPM * 7;
-    const toiletWeekly = inputs.flushes * WATER_METRICS.FLUSH_GPF * 7;
+    const showerWeekly = inputs.showerMinutes * WATER_METRICS.SHOWER_LITRES_PER_MINUTE * 7;
+    const bathWeekly = inputs.baths * WATER_METRICS.BATH_LITRES_PER_TUB;
+    const faucetWeekly = inputs.faucetMinutes * WATER_METRICS.FAUCET_LITRES_PER_MINUTE * 7;
+    const toiletWeekly = inputs.flushes * WATER_METRICS.TOILET_LITRES_PER_FLUSH * 7;
     
     // Shared Resources (Per Capita)
-    const laundryWeekly = (inputs.laundryLoads * WATER_METRICS.LAUNDRY_GPL) / householdDivisor;
-    const dishwasherWeekly = (inputs.dishwasherLoads * WATER_METRICS.DISHWASHER_GPC) / householdDivisor;
-    const gardenWeekly = (inputs.gardenMinutes * WATER_METRICS.GARDEN_GPM) / householdDivisor;
+    const laundryWeekly = (inputs.laundryLoads * WATER_METRICS.LAUNDRY_LITRES_PER_LOAD_HE) / householdDivisor;
+    const dishwasherWeekly = (inputs.dishwasherLoads * WATER_METRICS.DISHWASHER_LITRES_PER_CYCLE_ENERGYSTAR) / householdDivisor;
+    const gardenWeekly = (inputs.gardenMinutes * WATER_METRICS.GARDEN_SPRINKLER_LITRES_PER_MINUTE) / householdDivisor;
     
     // Virtual & Lifestyle
-    const clothingWeekly = inputs.newClothingItems * WATER_METRICS.CLOTHING_AVG_GPI; 
-    const dietWeekly = inputs.meatMeals * WATER_METRICS.DIET_MEAT_GPM;
-    const transportWeekly = inputs.milesDriven * WATER_METRICS.FUEL_GPM;
-    const aiWeekly = inputs.aiQueries * WATER_METRICS.AI_QUERY_GPQ;
+    const clothingWeekly = inputs.newClothingItems * WATER_METRICS.CLOTHING_LITRES_PER_ITEM; 
+    const dietWeekly = inputs.meatMeals * WATER_METRICS.MEAT_BEEF_LITRES_PER_MEAL;
+    const transportWeekly = inputs.milesDriven * WATER_METRICS.TRANSPORT_LITRES_PER_KM;
+    const aiWeekly = inputs.aiQueries * WATER_METRICS.AI_LITRES_PER_QUERY;
 
     // Credits (Offsets)
-    const recyclingWeekly = inputs.recyclingItems * WATER_METRICS.RECYCLING_CREDIT;
-    const compostWeekly = inputs.compostLbs * WATER_METRICS.COMPOST_CREDIT;
+    const recyclingWeekly = inputs.recyclingItems * WATER_METRICS.RECYCLING_LITRES_SAVED_PER_ITEM;
+    const compostWeekly = inputs.compostLbs * WATER_METRICS.COMPOSTING_LITRES_SAVED_PER_KG;
 
     const directTotal = showerWeekly + bathWeekly + faucetWeekly + toiletWeekly + laundryWeekly + dishwasherWeekly + gardenWeekly;
-    const virtualTotal = clothingWeekly + dietWeekly + transportWeekly + aiWeekly + recyclingWeekly + compostWeekly;
+    const virtualTotal = clothingWeekly + dietWeekly + transportWeekly + aiWeekly - recyclingWeekly - compostWeekly;
     const grandTotal = directTotal + virtualTotal;
 
     // Comparison vs Canada Baseline
     const trend = ((grandTotal - BASELINE_CANADIAN_WEEKLY) / BASELINE_CANADIAN_WEEKLY) * 100;
     
     // Impact Score (0-100)
-    // Target < 1500 is ideal
-    const rawScore = 100 - ((grandTotal - 1500) / 40);
+    // Target <= 100000 L is ideal
+    const rawScore = 100 - ((grandTotal - 100000) / 1360);
     const score = Math.max(0, Math.min(100, Math.round(rawScore)));
 
     return {
@@ -538,13 +538,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                    <span className="text-4xl md:text-6xl font-serif text-[#2C2A26] tracking-tight">
                       <AnimatedNumber value={Math.round(stats.grandTotal)} />
                    </span>
-                   <span className="text-base text-[#98A89A] font-light">gal</span>
+                   <span className="text-base text-[#98A89A] font-light">L</span>
                 </div>
                 <div className="flex items-center gap-2">
                    <span className="bg-[#98A89A]/20 text-[#5F7A65] px-3 py-1 rounded-full text-xs font-bold tracking-wide">
                      <AnimatedNumber value={Math.abs(Math.round(stats.trend))} />% {stats.trend > 0 ? 'above' : 'below'} avg
                    </span>
                 </div>
+                <p className="text-[10px] text-[#A8A29E] mt-3 text-center max-w-[150px] leading-tight">Your estimated total water footprint, including virtual water in food, clothing & daily consumption.</p>
               </div>
 
               {/* Divider */}
@@ -750,7 +751,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                                     <span className="font-serif text-xl text-[#2C2A26]">{weeklyInputs.aiQueries}</span>
                                 </div>
                                 <CustomSlider min={0} max={200} step={10} value={weeklyInputs.aiQueries} onChange={(val) => handleWeeklyInputChange('aiQueries', val)} />
-                                <p className="text-[10px] text-[#A8A29E] mt-1">Data center cooling consumes ~0.005 gal per heavy session.</p>
+                                <p className="text-[10px] text-[#A8A29E] mt-1">Data center cooling consumes ~0.019 L per query.</p>
                             </div>
                             <div className="group border-b border-[#E8DFC8]/50 pb-5">
                                 <div className="flex justify-between items-end mb-3">
@@ -770,9 +771,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                     </div>
                 </div>
 
-                <div className="mt-12 pt-8 border-t border-[#E8DFC8]/50 text-center">
-                     <p className="text-xs text-[#98A89A] font-medium tracking-wide">
-                         Estimates based on research from EPA, Environment Canada, USGS, and Water Footprint Network.
+                <div className="mt-12 pt-8 border-t border-[#E8DFC8]/50 text-center space-y-1">
+                     <p className="text-xs text-[#2C2A26] font-medium">Canadian average: 6,000 L/day per person (total footprint)</p>
+                     <p className="text-xs text-[#2C2A26] font-medium">Canadian tap use only: 223 L/day per person</p>
+                     <p className="text-[10px] text-[#98A89A] tracking-wide mt-2">
+                         Statistics Canada (2021); Canada WaterPortal / Brock University UNESCO Chair
                      </p>
                 </div>
             </div>
