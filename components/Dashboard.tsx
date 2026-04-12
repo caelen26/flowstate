@@ -740,7 +740,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                             </div>
                             <div className="group border-b border-[#E8DFC8]/50 pb-5">
                                 <div className="flex justify-between items-end mb-3">
-                                    <label className="text-xs font-semibold text-[#789094]">Miles Driven</label>
+                                    <label className="text-xs font-semibold text-[#789094]">Kilometres Driven</label>
                                     <span className="font-serif text-xl text-[#2C2A26]">{weeklyInputs.milesDriven}</span>
                                 </div>
                                 <CustomSlider min={0} max={500} step={10} value={weeklyInputs.milesDriven} onChange={(val) => handleWeeklyInputChange('milesDriven', val)} />
@@ -762,7 +762,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                             </div>
                             <div className="group border-b border-[#E8DFC8]/50 pb-5">
                                 <div className="flex justify-between items-end mb-3">
-                                    <label className="text-xs font-semibold text-[#98A89A]">Compost (lbs)</label>
+                                    <label className="text-xs font-semibold text-[#98A89A]">Compost (kg)</label>
                                     <span className="font-serif text-xl text-[#5F7A65]">-{weeklyInputs.compostLbs}</span>
                                 </div>
                                 <CustomSlider min={0} max={20} value={weeklyInputs.compostLbs} onChange={(val) => handleWeeklyInputChange('compostLbs', val)} />
