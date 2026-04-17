@@ -7,6 +7,16 @@ const CustomCursor: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    // Check for touch/mobile devices
+    const isTouchDevice = 
+      (typeof window !== 'undefined' && 'ontouchstart' in window) || 
+      (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
+      (typeof window !== 'undefined' && window.innerWidth < 768);
+      
+    if (isTouchDevice) {
+      return;
+    }
+
     // Hide default cursor globally, even on hover states
     const style = document.createElement('style');
     style.innerHTML = `
@@ -129,14 +139,14 @@ const CustomCursor: React.FC = () => {
       {/* Outer ring follower */}
       <div 
         ref={followerRef}
-        className={`fixed top-0 left-0 w-10 h-10 rounded-full border border-[#2C2A26] pointer-events-none z-[99999] transform -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 origin-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        className={`hidden md:block fixed top-0 left-0 w-10 h-10 rounded-full border border-[#2C2A26] pointer-events-none z-[99999] transform -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 origin-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
         style={{ willChange: 'transform' }}
       />
       
       {/* Inner dot */}
       <div 
         ref={cursorRef}
-        className={`fixed top-0 left-0 w-2 h-2 rounded-full bg-[#2C2A26] pointer-events-none z-[100000] transform -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 origin-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        className={`hidden md:block fixed top-0 left-0 w-2 h-2 rounded-full bg-[#2C2A26] pointer-events-none z-[100000] transform -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 origin-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
         style={{ willChange: 'transform' }}
       />
     </>
